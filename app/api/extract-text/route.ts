@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import * as pdfjsLib from 'pdfjs-dist';
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
 export async function POST(req: NextRequest) {
   try {
