@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    resolveAlias: {
+      canvas: 'false',
+    },
+  },
 
   webpack: (config, { isServer }) => {
     // Exclude canvas from pdfjs-dist bundle
