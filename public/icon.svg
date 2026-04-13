@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#grad)" />
+  
+  <!-- Document/Resume Shape -->
+  <g transform="translate(100, 100)">
+    <!-- Document Body -->
+    <rect x="-35" y="-45" width="70" height="90" rx="6" fill="#ffffff" />
+    
+    <!-- Document Shadow -->
+    <rect x="-35" y="-45" width="70" height="8" rx="6" fill="#f0f9ff" />
+    
+    <!-- Check Mark -->
+    <g transform="translate(0, 0)">
+      <!-- Circle background for check -->
+      <circle cx="20" cy="-20" r="16" fill="#10b981" />
+      
+      <!-- Check mark -->
+      <path d="M15,-20 L18,-17 L25,-25" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    
+    <!-- Text lines on document -->
+    <line x1="-25" y1="-30" x2="15" y2="-30" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" />
+    <line x1="-25" y1="-20" x2="25" y2="-20" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="-25" y1="-12" x2="25" y2="-12" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="-25" y1="-4" x2="20" y2="-4" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="-25" y1="8" x2="25" y2="8" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="-25" y1="16" x2="15" y2="16" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+    <line x1="-25" y1="24" x2="20" y2="24" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+</svg>

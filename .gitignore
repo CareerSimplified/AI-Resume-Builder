@@ -23,6 +23,9 @@
 # misc
 .DS_Store
 *.pem
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # debug
 npm-debug.log*
@@ -31,7 +34,12 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local.example
 
 # vercel
 .vercel
@@ -39,3 +47,37 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI agent working files
+/agent/
+/agents/
+.qwen/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+/prisma/migrations/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+*.log
+
+# Test scripts (local development)
+test-*.js
+sync-*.js
+generate-*.js
+
+# Development users
+dev-users.json
