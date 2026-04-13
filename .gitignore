@@ -78,6 +78,7 @@ dist/
 test-*.js
 sync-*.js
 generate-*.js
+/testscripts/
 
 # Development users
 dev-users.json
