@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-// Use the modern build which doesn't require canvas
-const pdfjsLib = require('pdfjs-dist/build/pdf.js');
+import * as pdfjsLib from 'pdfjs-dist';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +13,7 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    // Set worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs-dist/build/pdf.worker.js';
+    // No worker needed in server-side v4
 
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,
