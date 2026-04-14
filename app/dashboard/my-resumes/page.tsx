@@ -23,27 +23,42 @@ export default function MyResumesPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
       fetchResumes()
-    } else if (!authLoading) {
-      setLoading(false)
     }
   }, [user, authLoading])
 
 
   const fetchResumes = async () => {
     try {
+      setLoading(true)
       setError(null)
       const { data, error: fetchError } = await resumeService.getByUserId(user!.id)
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Resume fetch response:', { data, fetchError })
+      }
+      
       if (fetchError) {
-        console.error('Resume fetch error:', fetchError)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Resume fetch error:', fetchError)
+        }
         setError('Failed to load resumes')
+        setResumes([])
         return
       }
-      setResumes(data || [])
+      
+      const resumeArray = Array.isArray(data) ? data : (data ? [data] : [])
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Setting resumes:', resumeArray)
+      }
+      setResumes(resumeArray)
     } catch (err: any) {
-      console.error('Error fetching resumes:', err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching resumes:', err)
+      }
       setError('Failed to load resumes')
+      setResumes([])
     } finally {
       setLoading(false)
     }
@@ -62,15 +77,18 @@ export default function MyResumesPage() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Resumes</h1>
-            <p className="text-dark-gray mt-2">Manage all your uploaded resumes</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">My Resumes</h1>
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1 md:mt-2">Manage all your uploaded resumes</p>
           </div>
-          <Button asChild>
-            <Link href="/dashboard/upload-resume">Upload New Resume</Link>
-          </Button>
+          <div className="flex gap-3 flex-wrap md:flex-nowrap">
+            <Button onClick={fetchResumes} variant="secondary">Refresh</Button>
+            <Button asChild>
+              <Link href="/dashboard/upload-resume">Upload New Resume</Link>
+            </Button>
+          </div>
         </div>
 
         {loading ? (

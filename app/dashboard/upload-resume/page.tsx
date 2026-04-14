@@ -151,7 +151,7 @@ export default function UploadResumePage() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
           <div className="lg:col-span-3">
              <form onSubmit={handleSubmit} className="space-y-6">
                 <Card className="border-none shadow-2xl shadow-blue-500/5 bg-white dark:bg-[#0b0f1a]">
@@ -178,8 +178,7 @@ export default function UploadResumePage() {
                             />
                           </div>
 
-                      <div
-                        className={`group relative border-2 border-dashed rounded-3xl p-16 text-center transition-all ${
+                    <div className={`group relative border-2 border-dashed rounded-2xl md:rounded-3xl p-8 md:p-16 text-center transition-all ${
                           isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 dark:border-gray-800 hover:border-blue-500 hover:bg-gray-50/10'
                         }`}
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect(e.dataTransfer.files[0]); }}
@@ -206,7 +205,7 @@ export default function UploadResumePage() {
                         )}
                       </div>
 
-                      <Button fullWidth size="lg" disabled={!selectedFile || !jdId} type="submit" className="mt-8 h-14 text-lg font-bold shadow-xl shadow-blue-500/20">
+                      <Button fullWidth size="lg" disabled={!selectedFile || !jdId} type="submit" className="mt-6 md:mt-8 h-12 md:h-14 text-base md:text-lg font-bold shadow-xl shadow-blue-500/20">
                          Generate AI Insights <Wand2 className="ml-2 w-5 h-5" />
                       </Button>
                         </>
