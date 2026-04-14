@@ -98,7 +98,7 @@ export const jobDescriptionService = {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    return { data, error }
+    return { data: (data as JobDescription[]) || null, error }
   },
 
   async getById(id: string) {
@@ -107,7 +107,7 @@ export const jobDescriptionService = {
       .select('*')
       .eq('id', id)
       .single()
-    return { data, error }
+    return { data: (data as JobDescription) || null, error }
   },
 
   async update(id: string, updates: Partial<JobDescription>) {
