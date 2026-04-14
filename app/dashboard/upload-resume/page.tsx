@@ -27,6 +27,7 @@ export default function UploadResumePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [analysisStep, setAnalysisStep] = useState(0)
+  const [loadingJDs, setLoadingJDs] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -36,12 +37,22 @@ export default function UploadResumePage() {
 
   const fetchJobDescriptions = async () => {
     try {
-      const { data } = await jobDescriptionService.getByUserId(user!.id)
+      setLoadingJDs(true)
+      const { data, error: fetchError } = await jobDescriptionService.getByUserId(user!.id)
+      if (fetchError) {
+        console.error('Error fetching JDs:', fetchError)
+        error('Failed to load job descriptions')
+        return
+      }
       const jds = data || []
+      console.log('Fetched job descriptions:', jds)
       setJobDescriptions(jds)
       if (jds.length === 1) setJdId(jds[0].id)
     } catch (err: any) {
+      console.error('Exception fetching JDs:', err)
       error('Failed to load job descriptions')
+    } finally {
+      setLoadingJDs(false)
     }
   }
 
