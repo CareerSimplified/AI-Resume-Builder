@@ -151,7 +151,7 @@ export const resumeService = {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    return { data, error }
+    return { data: (data as Resume[]) || [], error }
   },
 
   async getById(id: string) {
@@ -160,7 +160,7 @@ export const resumeService = {
       .select('*')
       .eq('id', id)
       .single()
-    return { data, error }
+    return { data: (data as Resume | null), error }
   },
 
   async delete(id: string) {
@@ -210,7 +210,7 @@ export const reportService = {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    return { data, error }
+    return { data: (data as Report[]) || [], error }
   },
 
   async getAll() {

@@ -7,6 +7,7 @@ import { Card, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Badge } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { resumeService } from '@/services/database.service'
 import { Resume } from '@/types'
 import Link from 'next/link'
@@ -16,8 +17,10 @@ import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 
 export default function MyResumesPage() {
   const { user, loading: authLoading } = useAuth()
+  const { error: errorToast } = useToast()
   const [resumes, setResumes] = useState<Resume[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -30,10 +33,17 @@ export default function MyResumesPage() {
 
   const fetchResumes = async () => {
     try {
-      const { data } = await resumeService.getByUserId(user!.id)
+      setError(null)
+      const { data, error: fetchError } = await resumeService.getByUserId(user!.id)
+      if (fetchError) {
+        console.error('Resume fetch error:', fetchError)
+        setError('Failed to load resumes')
+        return
+      }
       setResumes(data || [])
-    } catch (error) {
-      console.error('Error fetching resumes:', error)
+    } catch (err: any) {
+      console.error('Error fetching resumes:', err)
+      setError('Failed to load resumes')
     } finally {
       setLoading(false)
     }
@@ -66,6 +76,13 @@ export default function MyResumesPage() {
         {loading ? (
           <Card>
             <CardBody>Loading...</CardBody>
+          </Card>
+        ) : error ? (
+          <Card>
+            <CardBody>
+              <p className="text-center text-red-600 py-8">{error}</p>
+              <div className="text-center"><Button onClick={fetchResumes}>Retry</Button></div>
+            </CardBody>
           </Card>
         ) : resumes.length === 0 ? (
           <Card>
