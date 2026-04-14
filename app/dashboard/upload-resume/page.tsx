@@ -145,15 +145,27 @@ export default function UploadResumePage() {
              <form onSubmit={handleSubmit} className="space-y-6">
                 <Card className="border-none shadow-2xl shadow-blue-500/5 bg-white dark:bg-[#0b0f1a]">
                    <CardBody className="p-8">
-                      <div className="mb-6">
-                        <Select
-                          label="Target Role"
-                          value={jdId}
-                          onChange={(e) => setJdId(e.target.value)}
-                          options={jobDescriptions.map(jd => ({ value: jd.id, label: `${jd.title} at ${jd.company}` }))}
-                          required
-                        />
-                      </div>
+                      {jobDescriptions.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-gray-600 dark:text-gray-400 mb-4">No job descriptions found. Create one first!</p>
+                          <Button 
+                            onClick={() => router.push('/dashboard/create-jd')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Create Job Description
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="mb-6">
+                            <Select
+                              label="Target Role"
+                              value={jdId}
+                              onChange={(e) => setJdId(e.target.value)}
+                              options={jobDescriptions.map(jd => ({ value: jd.id, label: `${jd.title} at ${jd.company}` }))}
+                              required
+                            />
+                          </div>
 
                       <div
                         className={`group relative border-2 border-dashed rounded-3xl p-16 text-center transition-all ${
@@ -186,6 +198,8 @@ export default function UploadResumePage() {
                       <Button fullWidth size="lg" disabled={!selectedFile || !jdId} type="submit" className="mt-8 h-14 text-lg font-bold shadow-xl shadow-blue-500/20">
                          Generate AI Insights <Wand2 className="ml-2 w-5 h-5" />
                       </Button>
+                        </>
+                      )}
                    </CardBody>
                 </Card>
              </form>
