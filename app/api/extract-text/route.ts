@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    // No worker needed in server-side v4
+    // Use the CDN version of the worker for server-side rendering
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,

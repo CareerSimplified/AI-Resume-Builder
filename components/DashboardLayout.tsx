@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { LoadingSkeleton } from './Loading'
 import { Sidebar, SidebarTrigger } from './Sidebar'
 import { ThemeToggle } from './ui/ThemeToggle'
-import { Bell, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -41,8 +41,8 @@ export const DashboardLayout = ({ children, sidebarItems }: DashboardLayoutProps
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3">
+        <header className="bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+          <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3 md:hidden">
               <SidebarTrigger onClick={() => setSidebarOpen(true)} />
               <h1 className="text-lg font-bold text-blue-600">AI Resume Builder</h1>
@@ -61,11 +61,6 @@ export const DashboardLayout = ({ children, sidebarItems }: DashboardLayoutProps
 
             <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
-              
-              <button className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
               
               {user && (
                 <div className="hidden md:flex items-center gap-3">

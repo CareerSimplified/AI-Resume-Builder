@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
         'canvas',
       ];
     }
+
+    // Handle pdfjs-dist worker
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pdfjs-dist/build/pdf.worker.min': 'pdfjs-dist/build/pdf.worker.min.js',
+      'pdfjs-dist/build/pdf.worker': 'pdfjs-dist/build/pdf.worker.js',
+    };
     
     return config;
   },
