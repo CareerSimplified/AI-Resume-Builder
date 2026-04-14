@@ -107,7 +107,7 @@ export const jobDescriptionService = {
       .select('*')
       .eq('id', id)
       .single()
-    return { data: (data as JobDescription) || null, error }
+    return { data: (data as JobDescription | null) || null, error }
   },
 
   async update(id: string, updates: Partial<JobDescription>) {
