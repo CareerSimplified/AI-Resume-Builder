@@ -41,7 +41,7 @@ export const DashboardLayout = ({ children, sidebarItems }: DashboardLayoutProps
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600">
+        <header className="bg-white dark:bg-[#0b0f1a] border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3 md:hidden">
               <SidebarTrigger onClick={() => setSidebarOpen(true)} />
