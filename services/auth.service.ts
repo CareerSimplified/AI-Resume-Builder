@@ -71,7 +71,8 @@ export const authService = {
     }
   },
 
-  // Sign in with Google OAuth
+  // Sign in with Google OAuth - CURRENTLY DISABLED
+  /*
   async signInWithGoogle() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -93,6 +94,7 @@ export const authService = {
       return { data: null, error }
     }
   },
+  */
 
   // Sign out
   async signOut() {

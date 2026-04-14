@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
   },
 
   webpack: (config, { isServer }) => {
-    // Exclude canvas from pdfjs-dist bundle
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,
@@ -22,6 +21,10 @@ const nextConfig: NextConfig = {
     }
     
     return config;
+  },
+
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'clsx'],
   },
 };
 

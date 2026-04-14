@@ -1,14 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export const config = {
-  matcher: [
-    '/dashboard/:path*',
-    '/admin/:path*',
-    '/auth/:path*',
-  ],
-}
-
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -59,4 +51,12 @@ export async function proxy(request: NextRequest) {
   }
 
   return response
+}
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/auth/:path*',
+  ],
 }
