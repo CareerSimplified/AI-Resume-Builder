@@ -1,5 +1,7 @@
 'use client'
 
+import { logger } from '@/lib/logger'
+
 export const fileService = {
   // Extract text from file using API
   async extractTextFromFile(file: File): Promise<string> {
@@ -20,7 +22,7 @@ export const fileService = {
 
       return result.text
     } catch (error) {
-      console.error('Error extracting file:', error)
+      logger.error('FileService', error)
       throw error
     }
   },

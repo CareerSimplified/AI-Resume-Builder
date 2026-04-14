@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    // Use the CDN version of the worker for server-side rendering
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+    // Use worker from pdfjs-dist package
+    const pdfjsWorkerSrc = `/pdf.worker.min.js`
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc
 
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,
@@ -36,10 +37,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, text: fullText })
   } catch (error: any) {
-    console.error('Final Extraction Error:', error)
+    const isDev = process.env.NODE_ENV === 'development'
+    if (isDev) console.error('Extract Text Error:', error)
     return NextResponse.json({
       success: false,
-      error: `Service Error: ${error.message}`
+      error: isDev ? `Service Error: ${error.message}` : 'Failed to process file. Please try again.'
     }, { status: 500 })
   }
 }

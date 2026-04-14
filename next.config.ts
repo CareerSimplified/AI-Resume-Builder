@@ -1,4 +1,18 @@
 import type { NextConfig } from "next";
+import fs from 'fs';
+import path from 'path';
+
+// Copy pdfjs worker to public folder
+const pdfjsWorkerSource = path.join(process.cwd(), 'node_modules/pdfjs-dist/build/pdf.worker.min.js');
+const pdfjsWorkerDest = path.join(process.cwd(), 'public/pdf.worker.min.js');
+
+try {
+  if (!fs.existsSync(pdfjsWorkerDest)) {
+    fs.copyFileSync(pdfjsWorkerSource, pdfjsWorkerDest);
+  }
+} catch (err) {
+  console.warn('Failed to copy PDF worker:', err);
+}
 
 const nextConfig: NextConfig = {
   turbopack: {
