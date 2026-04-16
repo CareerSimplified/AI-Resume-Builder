@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as pdfjsLib from 'pdfjs-dist'
+import path from 'path'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +14,9 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    // Use worker from pdfjs-dist package
-    const pdfjsWorkerSrc = `/pdf.worker.min.js`
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc
+    // Configure worker for server-side execution
+    const workerPath = path.join(process.cwd(), 'public', 'pdf.worker.min.js')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath
 
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,

@@ -82,3 +82,14 @@ generate-*.js
 
 # Development users
 dev-users.json
+
+# SQL and documentation files
+*.sql
+*.ps1
+*.md
+/tests/
+/testscripts/
+/sql/
+/docs/
+!**/README.md
+.sql

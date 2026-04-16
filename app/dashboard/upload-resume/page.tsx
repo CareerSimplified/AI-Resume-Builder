@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Home, FileText, Plus, BarChart3, Settings, Upload, File, Sparkles, Wand2, Loader2, Search } from 'lucide-react'
+import { Home, FileText, Plus, BarChart3, Settings, Upload, File, Sparkles, Wand2, Loader2, Search, AlertCircle } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardHeader, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase'
 import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 
 export default function UploadResumePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, mounted } = useAuth()
   const router = useRouter()
   const { success, error, loading: loadingToast } = useToast()
   const [analyzing, setAnalyzing] = useState(false)
@@ -28,12 +28,15 @@ export default function UploadResumePage() {
   const [isDragging, setIsDragging] = useState(false)
   const [analysisStep, setAnalysisStep] = useState(0)
   const [loadingJDs, setLoadingJDs] = useState(true)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user) {
+    if (mounted && !authLoading && user?.id) {
       fetchJobDescriptions()
+    } else if (mounted && !authLoading && !user) {
+      setLoadingJDs(false)
     }
-  }, [user])
+  }, [user, authLoading, mounted])
 
   const fetchJobDescriptions = async () => {
     try {
@@ -70,37 +73,79 @@ export default function UploadResumePage() {
     setAnalysisStep(1) // Step 1: Extracting text
 
     try {
+      // Verify session is valid before proceeding
+      console.log('Verifying auth session...')
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !sessionData?.session) {
+        throw new Error('Authentication session expired. Please refresh and try again.')
+      }
+      console.log('✓ Auth session verified, user:', sessionData.session.user.id)
+
+      console.log('Step 1: Extracting text from file...')
       const extractedText = await fileService.extractTextFromFile(selectedFile)
+      console.log('✓ Text extracted successfully, length:', extractedText.length)
       setAnalysisStep(2) // Step 2: Uploading
 
-      const fileName = `${user.id}/${Date.now()}-${selectedFile.name}`
-      await supabase.storage.from('resumes').upload(fileName, selectedFile)
-      const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(fileName)
+      // Step 2: Upload file and save to database using server API
+      console.log('Step 2: Uploading file and saving to database...')
+      
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', selectedFile)
+      uploadFormData.append('jdId', jdId)
+      uploadFormData.append('userId', user.id)
+      uploadFormData.append('extractedText', extractedText)
 
-      const { data: resumeData } = await resumeService.create(user.id, jdId, urlData.publicUrl, extractedText, selectedFile.name)
-      if (!resumeData) throw new Error('Database Error')
+      const uploadResponse = await fetch('/api/upload-resume', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      const uploadResult = await uploadResponse.json()
+
+      if (!uploadResponse.ok) {
+        console.error('Upload API error:', uploadResult)
+        throw new Error(`Upload failed: ${uploadResult.error || 'Unknown error'}`)
+      }
+
+      console.log('✓ Resume uploaded and saved, ID:', uploadResult.resume.id)
+      const resumeId = uploadResult.resume.id
 
       setAnalysisStep(3) // Step 3: AI Magic
       const jd = jobDescriptions.find(j => j.id === jdId)
       
+      if (!jd) {
+        throw new Error('Job description not found')
+      }
+
+      console.log('Step 3: Starting AI analysis...')
       const analysisResponse = await fetch('/api/analyze-resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resumeText: extractedText,
           jobDescription: jd.description,
-          resumeId: resumeData[0].id,
+          resumeId: resumeId,
           userId: user.id,
           jdId: jdId,
         }),
       })
 
-      if (!analysisResponse.ok) throw new Error('AI Analysis failed')
+      if (!analysisResponse.ok) {
+        const errorText = await analysisResponse.text()
+        console.error('Analysis API error:', errorText)
+        throw new Error(`AI Analysis failed: ${analysisResponse.status}`)
+      }
+
+      const analysisResult = await analysisResponse.json()
+      console.log('✓ Analysis complete:', analysisResult)
       
       success('Analysis complete!')
-      router.push(`/dashboard/reports/${resumeData[0].id}`)
+      router.push(`/dashboard/reports/${resumeId}`)
     } catch (err: any) {
-      error(err.message || 'Operation failed')
+      console.error('Full error:', err)
+      const errorMsg = err.message || 'Operation failed'
+      setAnalysisError(errorMsg)
+      error(errorMsg)
       setAnalyzing(false)
     }
   }
@@ -111,30 +156,60 @@ export default function UploadResumePage() {
     return (
       <DashboardLayout sidebarItems={sidebarItems}>
         <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6">
-          <div className="relative mb-8">
-            <div className="w-24 h-24 border-4 border-blue-500/20 rounded-full animate-ping absolute inset-0"></div>
-            <div className="w-24 h-24 border-4 border-t-blue-600 rounded-full animate-spin flex items-center justify-center relative bg-white dark:bg-gray-900 shadow-xl">
-              <Sparkles className="w-10 h-10 text-blue-600 animate-pulse" />
+          {analysisError ? (
+            <div className="max-w-md">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Analysis Failed</h2>
+              <p className="text-red-600 dark:text-red-400 mb-4 text-sm break-words">{analysisError}</p>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  variant="secondary"
+                  onClick={() => {
+                    setAnalyzing(false)
+                    setAnalysisError(null)
+                    setSelectedFile(null)
+                  }}
+                >
+                  Try Again
+                </Button>
+                <Button 
+                  variant="secondary"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
-          </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {analysisStep === 1 && "Reading Passport to success..."}
-            {analysisStep === 2 && "Securing document records..."}
-            {analysisStep === 3 && "Consulting AI Career Expert..."}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8">
-            Please wait while our Gemini-powered engine analyzes your skills against the job requirements.
-          </p>
-          
-          <div className="w-full max-w-md bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-2 overflow-hidden">
-             <div className="h-full bg-blue-600 transition-all duration-[3000ms] ease-out" style={{width: `${(analysisStep / 3) * 100}%`}}></div>
-          </div>
-          <div className="flex justify-between w-full max-w-md text-xs font-bold uppercase tracking-widest text-gray-400">
-             <span className={analysisStep >= 1 ? "text-blue-500" : ""}>Extract</span>
-             <span className={analysisStep >= 2 ? "text-blue-500" : ""}>Secure</span>
-             <span className={analysisStep >= 3 ? "text-blue-500" : ""}>Analyze</span>
-          </div>
+          ) : (
+            <>
+              <div className="relative mb-8">
+                <div className="w-24 h-24 border-4 border-blue-500/20 rounded-full animate-ping absolute inset-0"></div>
+                <div className="w-24 h-24 border-4 border-t-blue-600 rounded-full animate-spin flex items-center justify-center relative bg-white dark:bg-gray-900 shadow-xl">
+                  <Sparkles className="w-10 h-10 text-blue-600 animate-pulse" />
+                </div>
+              </div>
+              
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {analysisStep === 1 && "Reading Passport to success..."}
+                {analysisStep === 2 && "Securing document records..."}
+                {analysisStep === 3 && "Consulting AI Career Expert..."}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8">
+                Please wait while our Gemini-powered engine analyzes your skills against the job requirements.
+              </p>
+              
+              <div className="w-full max-w-md bg-gray-100 dark:bg-gray-800 rounded-full h-2 mb-2 overflow-hidden">
+                 <div className="h-full bg-blue-600 transition-all duration-[3000ms] ease-out" style={{width: `${(analysisStep / 3) * 100}%`}}></div>
+              </div>
+              <div className="flex justify-between w-full max-w-md text-xs font-bold uppercase tracking-widest text-gray-400">
+                 <span className={analysisStep >= 1 ? "text-blue-500" : ""}>Extract</span>
+                 <span className={analysisStep >= 2 ? "text-blue-500" : ""}>Secure</span>
+                 <span className={analysisStep >= 3 ? "text-blue-500" : ""}>Analyze</span>
+              </div>
+            </>
+          )}
         </div>
       </DashboardLayout>
     )
@@ -156,7 +231,14 @@ export default function UploadResumePage() {
              <form onSubmit={handleSubmit} className="space-y-6">
                 <Card className="border-none shadow-2xl shadow-blue-500/5 bg-white dark:bg-[#0b0f1a]">
                    <CardBody className="p-8">
-                      {jobDescriptions.length === 0 ? (
+                      {loadingJDs ? (
+                        <div className="text-center py-8">
+                          <div className="flex items-center justify-center mb-4">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                          </div>
+                          <p className="text-gray-600 dark:text-gray-400">Loading job descriptions...</p>
+                        </div>
+                      ) : jobDescriptions.length === 0 ? (
                         <div className="text-center py-8">
                           <p className="text-gray-600 dark:text-gray-400 mb-4">No job descriptions found. Create one first!</p>
                           <Button 

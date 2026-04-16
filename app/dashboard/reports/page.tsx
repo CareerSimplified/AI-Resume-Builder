@@ -16,24 +16,40 @@ import clsx from 'clsx'
 import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 
 export default function ReportsPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, mounted } = useAuth()
   const { success, error } = useToast()
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user) {
+    if (mounted && !authLoading && user?.id) {
       fetchReports()
-    } else if (!authLoading) {
+    } else if (mounted && !authLoading && !user) {
       setLoading(false)
     }
-  }, [user, authLoading])
+  }, [user, authLoading, mounted])
 
   const fetchReports = async () => {
     setLoading(true)
     try {
+      // Try client-side first
       const { data, error: dbError } = await reportService.getByUserId(user!.id)
-      if (dbError) throw dbError
+      
+      if (dbError) {
+        console.log('Client query failed, trying API fallback')
+        // Try via API as fallback
+        const apiRes = await fetch(`/api/reports?userId=${user!.id}`)
+        if (apiRes.ok) {
+          const apiData = await apiRes.json()
+          if (apiData.success && apiData.data) {
+            setReports(apiData.data || [])
+            setLoading(false)
+            return
+          }
+        }
+        throw dbError
+      }
+      
       setReports(data || [])
     } catch (err: any) {
       console.error('Error fetching reports:', err)
@@ -46,15 +62,34 @@ export default function ReportsPage() {
   const handleDownload = (report: Report) => {
     const reportText = `
 RESUME ANALYSIS REPORT
-=====================
-Date: ${new Date(report.created_at).toLocaleDateString()}
-MATCH SCORE: ${report.match_score}%
-ATS SCORE: ${report.ats_score}%
+==============================================
+Generated: ${new Date(report.created_at).toLocaleDateString()} ${new Date(report.created_at).toLocaleTimeString()}
+
+SCORES
+==============================================
+Match Score:  ${report.match_score}%
+ATS Score:    ${report.ats_score}%
+
+KEY STRENGTHS
+==============================================
+${report.strengths && report.strengths.length > 0 ? report.strengths.map((s, i) => `${i + 1}. ${s}`).join('\n') : 'No data available'}
+
+GROWTH AREAS
+==============================================
+${report.weaknesses && report.weaknesses.length > 0 ? report.weaknesses.map((w, i) => `${i + 1}. ${w}`).join('\n') : 'No data available'}
+
+MISSING CORE SKILLS
+==============================================
+${report.missing_skills && report.missing_skills.length > 0 ? report.missing_skills.join(', ') : 'No missing skills identified'}
+
+ACTIONABLE ADVICE
+==============================================
+${report.suggestions && report.suggestions.length > 0 ? report.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n') : 'No suggestions available'}
     `.trim()
 
     const element = document.createElement('a')
     element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(reportText))
-    element.setAttribute('download', `report-${report.id.slice(0, 8)}.txt`)
+    element.setAttribute('download', `resume-analysis-${report.id.slice(0, 8)}.txt`)
     element.style.display = 'none'
     document.body.appendChild(element)
     element.click()

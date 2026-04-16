@@ -20,7 +20,7 @@ import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 export default function ReportDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, mounted } = useAuth()
   const { success, error } = useToast()
   const resumeId = params.id as string
 
@@ -30,51 +30,31 @@ export default function ReportDetailPage() {
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user && resumeId) {
+    if (mounted && user?.id && resumeId) {
       fetchData()
+    } else if (mounted && !user) {
+      setLoading(false)
     }
-  }, [user, resumeId])
+  }, [user, resumeId, mounted])
 
   const fetchData = async () => {
     try {
-      const { data: resumeData } = await resumeService.getById(resumeId)
-      setResume(resumeData)
+      // Fetch resume and report in parallel via API (bypasses RLS)
+      const [resumeRes, reportRes] = await Promise.all([
+        fetch(`/api/resumes/${resumeId}`),
+        fetch(`/api/reports/${resumeId}`)
+      ])
 
-      // Try to get report - may need retries if just analyzed
-      let reportData = null
-      let attempts = 0
-      const maxAttempts = 5
+      const resumeData = await resumeRes.json()
+      const reportData = await reportRes.json()
 
-      while (!reportData && attempts < maxAttempts) {
-        const { data } = await reportService.getByResumeId(resumeId)
-        if (data) {
-          reportData = data
-          break
-        }
-        
-        // If client-side query failed (possibly RLS), try via API
-        if (attempts === 0) {
-          try {
-            const apiRes = await fetch(`/api/reports/${resumeId}`)
-            if (apiRes.ok) {
-              const apiData = await apiRes.json()
-              if (apiData.success && apiData.data) {
-                reportData = apiData.data
-                break
-              }
-            }
-          } catch (apiErr) {
-            console.log('API fallback failed, will retry client query')
-          }
-        }
-
-        attempts++
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-        }
+      if (resumeData.success && resumeData.data) {
+        setResume(resumeData.data)
       }
 
-      setReport(reportData)
+      if (reportData.success && reportData.data) {
+        setReport(reportData.data)
+      }
     } catch (err: any) {
       console.error('Error fetching data:', err)
       error('Failed to load report')
@@ -93,17 +73,31 @@ export default function ReportDetailPage() {
   const handleCopyAll = () => {
     if (!report) return
     const fullReport = `
-REPORT: ${resume?.file_name}
-MATCH: ${report.match_score}% | ATS: ${report.ats_score}%
+RESUME ANALYSIS REPORT
+==============================================
+File: ${resume?.file_name || 'Unknown'}
+Generated: ${new Date(report.created_at).toLocaleDateString()} ${new Date(report.created_at).toLocaleTimeString()}
 
-STRENGTHS:
-${report.strengths.join('\n')}
+SCORES
+==============================================
+Match Score:  ${report.match_score}%
+ATS Score:    ${report.ats_score}%
 
-WEAKNESSES:
-${report.weaknesses.join('\n')}
+KEY STRENGTHS
+==============================================
+${report.strengths.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
-SUGGESTIONS:
-${report.suggestions.join('\n')}
+GROWTH AREAS
+==============================================
+${report.weaknesses.map((w, i) => `${i + 1}. ${w}`).join('\n')}
+
+MISSING CORE SKILLS
+==============================================
+${report.missing_skills.join(', ')}
+
+ACTIONABLE ADVICE
+==============================================
+${report.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
     `.trim()
     copyToClipboard(fullReport, 'Full Report')
   }
