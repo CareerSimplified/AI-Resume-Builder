@@ -92,4 +92,4 @@ dev-users.json
 /sql/
 /docs/
 !**/README.md
-.sql
+*.sql

@@ -106,5 +106,36 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- 5. Storage policies
--- Run these individually if they fail in a transaction
--- INSERT INTO storage.buckets (id, name, public) VALUES ('resumes', 'resumes', true) ON CONFLICT (id) DO NOTHING;
+-- Create resumes bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public) VALUES ('resumes', 'resumes', true) ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies for resumes bucket
+DROP POLICY IF EXISTS "Anyone can upload resume" ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can view resume" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own resume" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own resume" ON storage.objects;
+
+CREATE POLICY "Users can upload resumes"
+  ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (bucket_id = 'resumes' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can view resumes"
+  ON storage.objects
+  FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'resumes');
+
+CREATE POLICY "Users can update own resumes"
+  ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'resumes' AND auth.uid()::text = (storage.foldername(name))[1])
+  WITH CHECK (bucket_id = 'resumes' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can delete own resumes"
+  ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'resumes' AND auth.uid()::text = (storage.foldername(name))[1]);

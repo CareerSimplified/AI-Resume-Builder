@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Home, FileText, Plus, BarChart3, Settings, ArrowLeft, Copy, Download, CheckCircle, AlertCircle, Sparkles, Wand2, Lightbulb } from 'lucide-react'
+import { Home, FileText, Plus, BarChart3, Settings, ArrowLeft, Copy, Download, CheckCircle, AlertCircle, Sparkles, Wand2, Lightbulb, FileDown } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody, CardHeader } from '@/components/Card'
 import { Button } from '@/components/Button'
@@ -68,6 +68,18 @@ export default function ReportDetailPage() {
     setCopiedSection(section)
     success(`${section} copied to clipboard!`)
     setTimeout(() => setCopiedSection(null), 2000)
+  }
+
+  const handleDownloadResume = () => {
+    if (!resume?.file_url) return
+    const link = document.createElement('a')
+    link.href = resume.file_url
+    link.download = resume.file_name || 'resume.pdf'
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    success('Resume downloaded!')
   }
 
   const handleCopyAll = () => {
@@ -141,45 +153,52 @@ ${report.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="max-w-5xl mx-auto space-y-8 pb-12">
+      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 pb-12">
         {/* Navigation & Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
             <Link href="/dashboard/reports" className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2 mb-2 transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back to Reports
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
               AI Analysis Result
-              <Badge variant="primary">Beta</Badge>
+              <Badge variant="primary" className="text-xs">Beta</Badge>
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
-              <FileText className="w-4 h-4" />
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm sm:text-base truncate">
+              <FileText className="w-4 h-4 inline mr-1" />
               {resume.file_name}
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={handleCopyAll}>
-              <Copy className="w-4 h-4 mr-2" />
-              {copiedSection === 'Full Report' ? 'Copied!' : 'Copy Analysis'}
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button variant="outline" onClick={handleDownloadResume} size="sm" className="flex-1 sm:flex-none">
+              <FileDown className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Resume</span>
+              <span className="sm:hidden">Resume</span>
             </Button>
-            <Button onClick={() => window.print()} className="hidden md:flex">
-              <Download className="w-4 h-4 mr-2" />
-              Export PDF
+            <Button variant="secondary" onClick={handleCopyAll} size="sm" className="flex-1 sm:flex-none">
+              <Copy className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">{copiedSection === 'Full Report' ? 'Copied!' : 'Copy'}</span>
+              <span className="sm:hidden">Copy</span>
+            </Button>
+            <Button onClick={() => window.print()} size="sm" className="flex-1 sm:flex-none">
+              <Download className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
+              <span className="sm:hidden">PDF</span>
             </Button>
           </div>
         </div>
 
         {/* Global Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
           <Card className="overflow-hidden border-t-4 border-t-blue-500">
-            <CardBody className="p-8">
-              <div className="flex items-center justify-between mb-6">
+            <CardBody className="p-4 sm:p-6 md:p-8">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Match Accuracy</h3>
-                  <p className="text-sm text-gray-500">Correlation with job requirements</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Match Accuracy</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Correlation with job requirements</p>
                 </div>
-                <div className={clsx("text-4xl font-bold", getScoreColor(report.match_score))}>
+                <div className={clsx("text-2xl sm:text-3xl md:text-4xl font-bold", getScoreColor(report.match_score))}>
                   {report.match_score}%
                 </div>
               </div>
@@ -188,13 +207,13 @@ ${report.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
           </Card>
 
           <Card className="overflow-hidden border-t-4 border-t-purple-500">
-            <CardBody className="p-8">
-              <div className="flex items-center justify-between mb-6">
+            <CardBody className="p-4 sm:p-6 md:p-8">
+              <div className="flex items-center justify-between mb-4 md:mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">ATS Compatibility</h3>
-                  <p className="text-sm text-gray-500">Readability for automated systems</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">ATS Compatibility</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">Readability for automated systems</p>
                 </div>
-                <div className={clsx("text-4xl font-bold", getScoreColor(report.ats_score))}>
+                <div className={clsx("text-2xl sm:text-3xl md:text-4xl font-bold", getScoreColor(report.ats_score))}>
                   {report.ats_score}%
                 </div>
               </div>
@@ -204,7 +223,7 @@ ${report.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}
         </div>
 
         {/* Detailed Analysis Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8">
           
           {/* Strengths */}
           <section className="space-y-4">

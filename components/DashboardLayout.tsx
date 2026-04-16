@@ -77,8 +77,8 @@ export const DashboardLayout = ({ children, sidebarItems }: DashboardLayoutProps
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 md:p-8 max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
             {children}
           </div>
         </main>

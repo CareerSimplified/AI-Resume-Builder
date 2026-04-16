@@ -31,10 +31,13 @@ export const Sidebar = ({ items, isOpen = true, onClose, isMobile = false }: Sid
   const { success, error } = useToast()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-    success('Logged out successfully')
-    router.push('/auth/login')
+  const handleLogout = async () => {
+    try {
+      await logout()
+      success('Logged out successfully')
+    } catch (err) {
+      error('Logout failed')
+    }
   }
 
   if (isMobile && !isOpen) {

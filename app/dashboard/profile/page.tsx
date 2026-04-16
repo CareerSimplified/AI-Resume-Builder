@@ -10,10 +10,10 @@ import { Badge } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { userSidebarItems } from '@/config/sidebar'
-import { userService, resumeService, reportService, jobDescriptionService } from '@/services/database.service'
+import { userService } from '@/services/database.service'
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, mounted } = useAuth()
   const { success, error } = useToast()
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -25,25 +25,22 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    if (user) {
+    if (mounted && user) {
       setName(user.name || '')
       fetchStats()
+    } else if (mounted && !user) {
+      setLoading(false)
     }
-  }, [user])
+  }, [user, mounted])
 
   const fetchStats = async () => {
     try {
-      const [resumesRes, reportsRes, jdRes] = await Promise.all([
-        resumeService.getByUserId(user!.id),
-        reportService.getByUserId(user!.id),
-        jobDescriptionService.getByUserId(user!.id),
-      ])
-
-      setStats({
-        totalResumes: resumesRes.data?.length || 0,
-        totalReports: reportsRes.data?.length || 0,
-        totalJobDescriptions: jdRes.data?.length || 0,
-      })
+      const res = await fetch(`/api/user/${user!.id}/stats`)
+      const data = await res.json()
+      
+      if (data.success) {
+        setStats(data.data.stats)
+      }
     } catch (err) {
       console.error('Error fetching stats:', err)
     } finally {

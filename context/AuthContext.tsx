@@ -81,8 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
-    router.push('/auth/login')
-    router.refresh()
+    window.location.href = '/'
   }
 
   return (

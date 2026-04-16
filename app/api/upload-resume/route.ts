@@ -19,6 +19,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+
     console.log('[upload-resume API] Starting upload for user:', userId)
 
     // Step 1: Upload to Supabase storage using admin client
