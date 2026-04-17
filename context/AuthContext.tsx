@@ -47,11 +47,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Safety net: Force loading=false after 10 seconds if nothing else happens
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('[AuthContext] Auth check timed out. Forcing loading=false.')
+        setLoading(false)
+      }
+    }, 10000)
+
     refreshUser()
 
     // We still keep the listener for logout/login events in same tab
     if (isSupabaseConfigured()) {
       const { data: authListener } = getSupabase().auth.onAuthStateChange((event) => {
+        console.log('[AuthContext] Auth event:', event)
         if (event === 'SIGNED_OUT') {
            setUser(null)
            setLoading(false)
@@ -60,9 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       return () => {
+        clearTimeout(timeout)
         authListener.subscription.unsubscribe()
       }
     }
+
+    return () => clearTimeout(timeout)
   }, [])
 
   const logout = async () => {
