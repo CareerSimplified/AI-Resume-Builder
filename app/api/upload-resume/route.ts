@@ -2,7 +2,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { createRequire } from 'module'
 
 if (typeof global.DOMMatrix === 'undefined') {
   // @ts-ignore
@@ -29,17 +28,13 @@ async function getServerSupabase() {
   })
 }
 
-async function extractTextFromBuffer(buffer: Buffer) {
-  const _require = createRequire(import.meta.url)
-  const pdf = _require('pdf-parse')
-  try {
-    const data = await pdf(buffer)
-    return data.text || ''
-  } catch (err: any) {
-    console.error('[PDF-Parse Error]:', err.message)
-    return ''
-  }
+async function extractTextFromBuffer(buffer: Uint8Array) {
+  const { getDocumentProxy, extractText } = await import('unpdf')
+  const pdf = await getDocumentProxy(buffer)
+  const { text } = await extractText(pdf)
+  return text.trim()
 }
+
 
 export async function POST(req: NextRequest) {
   try {

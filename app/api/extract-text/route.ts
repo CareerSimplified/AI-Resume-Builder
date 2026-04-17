@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRequire } from 'module'
 
-// Polyfill DOMMatrix for Node.js environments (required by some PDF libraries on Vercel)
+// Polyfill DOMMatrix for Node.js environments
 if (typeof global.DOMMatrix === 'undefined') {
   // @ts-ignore
   global.DOMMatrix = class DOMMatrix {
@@ -16,20 +15,13 @@ if (typeof global.DOMMatrix === 'undefined') {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function extractTextFromBuffer(buffer: Buffer) {
-  const _require = createRequire(import.meta.url)
-  const pdf = _require('pdf-parse')
+async function extractTextFromBuffer(buffer: Uint8Array) {
+  const { getDocumentProxy, extractText } = await import('unpdf')
   
-  try {
-    const data = await pdf(buffer)
-    return { 
-      text: data.text || '', 
-      pages: data.numpages || 0 
-    }
-  } catch (err: any) {
-    console.error('[PDF-Parse Error]:', err.message)
-    throw new Error(`Failed to parse PDF: ${err.message}`)
-  }
+  const pdf = await getDocumentProxy(buffer)
+  const { text } = await extractText(pdf)
+  
+  return { text: text.trim(), pages: pdf.numPages }
 }
 
 export async function POST(req: NextRequest) {
