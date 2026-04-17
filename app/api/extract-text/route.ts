@@ -4,6 +4,33 @@ import { createRequire } from 'module'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+async function extractTextFromBuffer(buffer: Buffer) {
+  const _require = createRequire(import.meta.url)
+  const pdfjs = _require('pdfjs-dist')
+  
+  // Set worker to null or a path if needed, but in Node it often works without
+  // especially if we only need text.
+  
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+    disableFontFace: true,
+    nativeImageDecoderSupport: 'none'
+  })
+  
+  const pdf = await loadingTask.promise
+  let fullText = ''
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const textContent = await page.getTextContent()
+    const pageText = textContent.items.map((item: any) => item.str).join(' ')
+    fullText += pageText + '\n'
+  }
+  
+  return { text: fullText.trim(), pages: pdf.numPages }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
@@ -13,7 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 })
     }
 
-    console.log('[API/extract-text] Processing:', file.name, 'type:', file.type)
+    console.log('[API/extract-text] Using PURE PDFJS for:', file.name)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
@@ -21,35 +48,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      const _require = createRequire(import.meta.url)
-      const pdfParse = _require('pdf-parse')
-
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-
-      // Support for different library versions (function vs property)
-      let data;
-      if (typeof pdfParse === 'function') {
-        data = await pdfParse(buffer)
-      } else if (pdfParse.default && typeof pdfParse.default === 'function') {
-        data = await pdfParse.default(buffer)
-      } else if (typeof pdfParse.PDFParse === 'function') {
-        // Fallback for some newer class-based forks
-        const parser = new pdfParse.PDFParse();
-        data = await parser.parse(buffer);
-      } else {
-        throw new Error('PDF parsing library is misconfigured or incompatible structure.')
-      }
       
-      const text = data?.text?.trim()
+      const { text, pages } = await extractTextFromBuffer(buffer)
+      
       if (!text) {
         return NextResponse.json({ 
           success: false, 
-          error: 'Could not extract text. The PDF might be scanned or image-based.' 
+          error: 'The PDF content appears to be empty or image-only (scanned).' 
         }, { status: 422 })
       }
 
-      return NextResponse.json({ success: true, text, pages: data.numpages || 1 })
+      return NextResponse.json({ success: true, text, pages })
     }
 
     return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 })
