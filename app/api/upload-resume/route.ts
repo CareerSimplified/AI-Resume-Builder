@@ -21,20 +21,27 @@ async function getServerSupabase() {
 async function extractTextFromBuffer(buffer: Buffer) {
   const _require = createRequire(import.meta.url)
   const pdfjs = _require('pdfjs-dist')
+  
+  // Forces execution without worker file for Vercel/Serverless
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
     disableFontFace: true,
-    nativeImageDecoderSupport: 'none'
+    nativeImageDecoderSupport: 'none',
+    maxImageSize: -1,
+    disableWorker: true,
   })
+  
   const pdf = await loadingTask.promise
   let fullText = ''
+  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const textContent = await page.getTextContent()
     const pageText = textContent.items.map((item: any) => item.str).join(' ')
-    fullText += pageText + '\n'
+    fullText += pageText + ' \n'
   }
+  
   return fullText.trim()
 }
 
@@ -50,9 +57,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // FALLBACK: If extraction was not done on client, do it here using PURE PDFJS
+    console.log('[API/upload-resume] Uploading for user:', userId)
+
+    // FALLBACK: If extraction was not done or is too short, do it here with PURE PDFJS
     if (!extractedText || extractedText === 'undefined' || extractedText.length < 10) {
-      console.log('[API/upload-resume] Fallback extraction starting...')
+      console.log('[API/upload-resume] Fallback extraction starting with PURE PDFJS...')
       try {
         if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
           const arrayBuffer = await file.arrayBuffer()

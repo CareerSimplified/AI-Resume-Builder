@@ -8,14 +8,15 @@ async function extractTextFromBuffer(buffer: Buffer) {
   const _require = createRequire(import.meta.url)
   const pdfjs = _require('pdfjs-dist')
   
-  // Set worker to null or a path if needed, but in Node it often works without
-  // especially if we only need text.
-  
+  // CRITICAL: Disable the worker for server-side environments to avoid path resolution errors
+  // We use the synchronous-ish loading task on the main thread for these small-to-medium PDFs
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
     disableFontFace: true,
-    nativeImageDecoderSupport: 'none'
+    nativeImageDecoderSupport: 'none',
+    maxImageSize: -1,
+    disableWorker: true, // Forces execution without an external worker file
   })
   
   const pdf = await loadingTask.promise
@@ -25,7 +26,7 @@ async function extractTextFromBuffer(buffer: Buffer) {
     const page = await pdf.getPage(i)
     const textContent = await page.getTextContent()
     const pageText = textContent.items.map((item: any) => item.str).join(' ')
-    fullText += pageText + '\n'
+    fullText += pageText + ' \n'
   }
   
   return { text: fullText.trim(), pages: pdf.numPages }
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 })
     }
 
-    console.log('[API/extract-text] Using PURE PDFJS for:', file.name)
+    console.log('[API/extract-text] Using PURE PDFJS (Worker Disabled) for:', file.name)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
@@ -56,10 +57,11 @@ export async function POST(req: NextRequest) {
       if (!text) {
         return NextResponse.json({ 
           success: false, 
-          error: 'The PDF content appears to be empty or image-only (scanned).' 
+          error: 'The PDF content is empty or contains only images (scanned document).' 
         }, { status: 422 })
       }
 
+      console.log('[API/extract-text] Success, extracted', text.length, 'chars')
       return NextResponse.json({ success: true, text, pages })
     }
 
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
     console.error('[API/extract-text] Fatal Error:', error.message)
     return NextResponse.json({ 
       success: false, 
-      error: `Extraction failed: ${error.message || 'The file could not be read'}` 
+      error: `Extraction failed: ${error.message || 'Corrupted file or processing error'}` 
     }, { status: 500 })
   }
 }
