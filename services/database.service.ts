@@ -59,15 +59,20 @@ export const userService = {
   },
 
   async getUserStats(userId: string) {
-    const [resumesRes, reportsRes, jdRes] = await Promise.all([
-      supabase.from('resumes').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('reports').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('job_descriptions').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    ])
-    return {
-      totalResumes: resumesRes.count || 0,
-      totalReports: reportsRes.count || 0,
-      totalJobDescriptions: jdRes.count || 0,
+    try {
+      const response = await fetch(`/api/user/${userId}/stats`)
+      const result = await response.json()
+      if (result.success) {
+        return result.data.stats
+      }
+      throw new Error(result.error || 'Failed to fetch stats')
+    } catch (err) {
+      console.error('Error in getUserStats service:', err)
+      return {
+        totalResumes: 0,
+        totalReports: 0,
+        totalJobDescriptions: 0,
+      }
     }
   },
 }
@@ -146,12 +151,13 @@ export const resumeService = {
   },
 
   async getByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('resumes')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-    return { data: (data as Resume[]) || [], error }
+    try {
+      const response = await fetch(`/api/resumes?userId=${userId}`)
+      const result = await response.json()
+      return { data: (result.data as Resume[]) || [], error: result.success ? null : new Error(result.error) }
+    } catch (err: any) {
+      return { data: [], error: err }
+    }
   },
 
   async getById(id: string) {
