@@ -25,8 +25,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
         setUser(null)
         setLoading(false)
         return
@@ -39,15 +40,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const { data: userData } = await userService.getUserById(authUser.id)
-      setUser(userData || {
-        id: authUser.id,
-        email: authUser.email || '',
-        name: authUser.user_metadata?.name || '',
-        role: authUser.user_metadata?.role || 'user',
-        created_at: authUser.created_at
-      } as User)
+      try {
+        const { data: userData, error: dbError } = await userService.getUserById(authUser.id)
+        if (dbError) {
+          console.error('[AuthContext] Error fetching user profile:', dbError)
+        }
+        
+        setUser(userData || ({
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || '',
+          role: authUser.user_metadata?.role || 'user',
+          created_at: authUser.created_at
+        } as User))
+      } catch (dbEx) {
+        console.error('[AuthContext] Database exception getting user profile:', dbEx)
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || '',
+          role: authUser.user_metadata?.role || 'user',
+          created_at: authUser.created_at
+        } as User)
+      }
     } catch (err) {
+      console.error('[AuthContext] Unexpected error in refreshUser:', err)
       setUser(null)
     } finally {
       setLoading(false)
@@ -58,19 +75,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser()
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      if (session?.user) {
-        const { data } = await userService.getUserById(session.user.id)
-        setUser(data || {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || '',
-          role: session.user.user_metadata?.role || 'user',
-          created_at: session.user.created_at
-        } as User)
-      } else {
+      console.log('[AuthContext] Auth state change event:', event)
+      
+      try {
+        if (session?.user) {
+          const { data, error } = await userService.getUserById(session.user.id)
+          if (error) console.error('[AuthContext] State change fetch error:', error)
+          
+          setUser(data || ({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || '',
+            role: session.user.user_metadata?.role || 'user',
+            created_at: session.user.created_at
+          } as User))
+        } else {
+          setUser(null)
+        }
+      } catch (err) {
+        console.error('[AuthContext] Error in onAuthStateChange:', err)
         setUser(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => {
@@ -79,9 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    window.location.href = '/'
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      router.push('/')
+    } catch (err) {
+      console.error('[AuthContext] Logout error:', err)
+      window.location.href = '/'
+    }
   }
 
   return (
