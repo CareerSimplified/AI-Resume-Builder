@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import { User } from '@/types'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { userService } from '@/services/database.service'
 import { useRouter } from 'next/navigation'
 
@@ -26,7 +26,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     console.log('[AuthContext] refreshUser started')
+    
+    if (!isSupabaseConfigured()) {
+      console.error('[AuthContext] CRITICAL: Supabase environment variables are missing! Your Vercel environment is NOT configured correctly.')
+      setLoading(false)
+      return
+    }
+
     try {
+      console.log('[AuthContext] Fetching session...')
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError) {
@@ -44,16 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
       if (userError || !authUser) {
-        console.error('[AuthContext] User error:', userError)
+        console.error('[AuthContext] User profile retrieval error:', userError)
         setUser(null)
         setLoading(false)
         return
       }
 
       try {
+        console.log('[AuthContext] Mapping user data from database...')
         const { data: userData, error: dbError } = await userService.getUserById(authUser.id)
         if (dbError) {
-          console.error('[AuthContext] Error fetching user profile from DB:', dbError)
+          console.error('[AuthContext] Database profile error:', dbError)
         }
         
         setUser(userData || ({
@@ -64,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           created_at: authUser.created_at
         } as User))
       } catch (dbEx) {
-        console.error('[AuthContext] Database exception getting user profile:', dbEx)
+        console.error('[AuthContext] Exception while mapping DB user:', dbEx)
         setUser({
           id: authUser.id,
           email: authUser.email || '',
@@ -74,52 +83,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } as User)
       }
     } catch (err) {
-      console.error('[AuthContext] Unexpected error in refreshUser:', err)
+      console.error('[AuthContext] CRITICAL: Unexpected error in refreshUser:', err)
       setUser(null)
     } finally {
-      console.log('[AuthContext] refreshUser finished, setting loading=false')
+      console.log('[AuthContext] refreshUser complete, setting loading=false')
       setLoading(false)
       hasInitialized.current = true
     }
   }
 
   useEffect(() => {
+    // Initial fetch
     if (!hasInitialized.current) {
-        refreshUser()
+      refreshUser()
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      console.log('[AuthContext] onAuthStateChange event:', event)
-      
-      try {
-        if (session?.user) {
-          const { data, error } = await userService.getUserById(session.user.id)
-          if (error) console.error('[AuthContext] State change fetch error:', error)
-          
-          setUser(data || ({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-            role: session.user.user_metadata?.role || 'user',
-            created_at: session.user.created_at
-          } as User))
-        } else {
-          setUser(null)
+    // Auth listener
+    if (isSupabaseConfigured() && supabase.auth) {
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+        console.log('[AuthContext] Auth event:', event)
+        
+        try {
+          if (session?.user) {
+            const { data, error } = await userService.getUserById(session.user.id)
+            setUser(data || ({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || '',
+              role: session.user.user_metadata?.role || 'user',
+              created_at: session.user.created_at
+            } as User))
+          } else {
+            setUser(null)
+          }
+        } catch (err) {
+          console.error('[AuthContext] Auth transition error:', err)
+        } finally {
+          setLoading(false)
         }
-      } catch (err) {
-        console.error('[AuthContext] Error in onAuthStateChange:', err)
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    })
+      })
 
-    return () => {
-      authListener.subscription.unsubscribe()
+      return () => {
+        authListener.subscription.unsubscribe()
+      }
+    } else {
+        setLoading(false)
     }
   }, [])
 
   const logout = async () => {
+    if (!isSupabaseConfigured()) return
     try {
       await supabase.auth.signOut()
       setUser(null)

@@ -2,50 +2,28 @@ import { createBrowserClient } from '@supabase/ssr'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 
-let browserClient: SupabaseClient<Database> | null = null
+// Standard client initialization without Proxy to avoid 'this' binding complexity
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const getSupabase = (): SupabaseClient<Database> => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Helper to check if client can be initialized
+export const isSupabaseConfigured = () => !!supabaseUrl && !!supabaseAnonKey
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // Return a dummy client that throws on actual use rather than crashing at import
-    // This allows the build to finish but gives a clear error in the console at runtime
-    console.error('Missing Supabase environment variables')
+// The client instance
+export const supabase: SupabaseClient<Database> = (function() {
+  if (!isSupabaseConfigured()) {
+    console.warn('[Supabase] Missing environment variables. Client will be non-functional.')
+    // Return a dummy object that safe-guarded against property access if possible
+    // But for simplicity, we return something that doesn't crash on export
     return {} as any
   }
 
   if (typeof window === 'undefined') {
-    return createClient<Database>(supabaseUrl, supabaseAnonKey)
+    return createClient<Database>(supabaseUrl!, supabaseAnonKey!)
   }
 
-  if (!browserClient) {
-    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
-  }
+  return createBrowserClient<Database>(supabaseUrl!, supabaseAnonKey!)
+})()
 
-  return browserClient
-}
-
-// Direct export for ease of use
-// Accessing this will initialize the client on demand
-export const supabase = (function() {
-  let instance: SupabaseClient<Database> | null = null;
-  return new Proxy({} as SupabaseClient<Database>, {
-    get(_, prop) {
-      if (!instance) {
-        instance = getSupabase();
-      }
-      
-      const value = (instance as any)[prop];
-      
-      // Bind functions to the real instance to avoid 'this' binding issues
-      if (typeof value === 'function') {
-        return value.bind(instance);
-      }
-      
-      return value;
-    }
-  });
-})();
-
-export const getSupabaseClient = () => getSupabase()
+export const getSupabase = () => supabase
+export const getSupabaseClient = () => supabase
