@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRequire } from 'module'
 
-// pdf-parse ships CJS only. With moduleResolution:"bundler" TypeScript resolves
-// the ESM stub which has no default export, so we load it via createRequire.
-const _require = createRequire(import.meta.url)
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> =
-  _require('pdf-parse')
+// We move the require inside the POST handler or a lazy getter
+// to prevent "Failed to collect page data" errors during Next.js build evaluation.
+// Some libraries like pdf-parse perform FS operations or have ESM/CJS logic
+// that crashes the Next.js static analysis if called at the top level.
 
 export const runtime = 'nodejs'
+// Prevent static optimization for this route
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,11 +30,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Lazy load pdf-parse only at runtime
+    const _require = createRequire(import.meta.url)
+    const pdfParse = _require('pdf-parse')
+
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
     const data = await pdfParse(buffer)
-    const text = data.text?.trim()
+    const text = data?.text?.trim()
 
     if (!text) {
       return NextResponse.json(
