@@ -60,45 +60,62 @@ ALTER TABLE public.job_descriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resumes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to check if user is admin (avoids RLS recursion)
+CREATE OR REPLACE FUNCTION public.is_admin() 
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- 3. Create RLS Policies
 
--- Users: own data access
-CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+-- Users: own data access + admin access
+CREATE POLICY "Users and admins can view profiles" ON public.users FOR SELECT
+  USING (auth.uid() = id OR public.is_admin());
 
--- Admin: can read ALL users
-CREATE POLICY "Admins can view all users" ON public.users FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE 
+  USING (auth.uid() = id);
 
 -- Job Descriptions: user owns their records
-CREATE POLICY "Users can view own job descriptions" ON public.job_descriptions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own job descriptions" ON public.job_descriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own job descriptions" ON public.job_descriptions FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own job descriptions" ON public.job_descriptions FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own job descriptions" ON public.job_descriptions FOR SELECT 
+  USING (auth.uid() = user_id OR public.is_admin());
 
--- Admin: can read ALL job descriptions
-CREATE POLICY "Admins can view all job descriptions" ON public.job_descriptions FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+CREATE POLICY "Users can insert own job descriptions" ON public.job_descriptions FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own job descriptions" ON public.job_descriptions FOR UPDATE 
+  USING (auth.uid() = user_id OR public.is_admin());
+
+CREATE POLICY "Users can delete own job descriptions" ON public.job_descriptions FOR DELETE 
+  USING (auth.uid() = user_id OR public.is_admin());
 
 -- Resumes: user owns their records
-CREATE POLICY "Users can view own resumes" ON public.resumes FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own resumes" ON public.resumes FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own resumes" ON public.resumes FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own resumes" ON public.resumes FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own resumes" ON public.resumes FOR SELECT 
+  USING (auth.uid() = user_id OR public.is_admin());
 
--- Admin: can read ALL resumes
-CREATE POLICY "Admins can view all resumes" ON public.resumes FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+CREATE POLICY "Users can insert own resumes" ON public.resumes FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own resumes" ON public.resumes FOR UPDATE 
+  USING (auth.uid() = user_id OR public.is_admin());
+
+CREATE POLICY "Users can delete own resumes" ON public.resumes FOR DELETE 
+  USING (auth.uid() = user_id OR public.is_admin());
 
 -- Reports: user owns their records
-CREATE POLICY "Users can view own reports" ON public.reports FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can insert own reports" ON public.reports FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own reports" ON public.reports FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own reports" ON public.reports FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own reports" ON public.reports FOR SELECT 
+  USING (auth.uid() = user_id OR public.is_admin());
 
--- Admin: can read ALL reports
-CREATE POLICY "Admins can view all reports" ON public.reports FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+CREATE POLICY "Users can insert own reports" ON public.reports FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own reports" ON public.reports FOR UPDATE 
+  USING (auth.uid() = user_id OR public.is_admin());
+
+CREATE POLICY "Users can delete own reports" ON public.reports FOR DELETE 
+  USING (auth.uid() = user_id OR public.is_admin());
 
 -- 4. Admin Analytics View (used by database.ts types and admin panel)
 DROP VIEW IF EXISTS public.admin_analytics;
