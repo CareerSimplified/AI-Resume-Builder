@@ -86,7 +86,7 @@ export default function DashboardPage() {
               {error}
             </p>
             <Button 
-              variant="default" 
+              variant="primary" 
               onClick={() => user && fetchDashboardData(user.id)}
               className="flex items-center gap-2 mx-auto"
             >
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex-shrink-0">
-                        <Button size="sm" variant="default" asChild className="rounded-xl shadow-none font-medium">
+                        <Button size="sm" variant="primary" asChild className="rounded-xl shadow-none font-medium">
                           <Link href={`/dashboard/reports/${resume.id}`}>View Score</Link>
                         </Button>
                       </div>
