@@ -2,9 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User } from '@/types'
-import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
-import { userService } from '@/services/database.service'
 import { useRouter } from 'next/navigation'
+import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 
 interface AuthContextType {
   user: User | null
@@ -24,45 +23,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
 
   const refreshUser = async () => {
-    console.log('[AuthContext] refreshUser triggered')
-    
-    if (!isSupabaseConfigured()) {
-      console.warn('[AuthContext] Supabase not configured, skipping auth check')
-      setLoading(false)
-      return
-    }
-
-    const supabase = getSupabase()
-
+    console.log('[AuthContext] refreshUser via API started')
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Use the internal /api/auth/me for standard session checking
+      // This is a "proper API call" visible in the network tab
+      const response = await fetch('/api/auth/me')
+      const result = await response.json()
       
-      if (sessionError || !session) {
+      if (result.success && result.data) {
+        console.log('[AuthContext] User found via API:', result.data.id)
+        setUser(result.data)
+      } else {
+        console.log('[AuthContext] No user found via API')
         setUser(null)
-        setLoading(false)
-        return
       }
-
-      console.log('[AuthContext] Session found:', session.user.id)
-
-      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
-      if (userError || !authUser) {
-        setUser(null)
-        setLoading(false)
-        return
-      }
-
-      const { data: userData, error: dbError } = await userService.getUserById(authUser.id)
-      
-      setUser(userData || ({
-        id: authUser.id,
-        email: authUser.email || '',
-        name: authUser.user_metadata?.name || '',
-        role: authUser.user_metadata?.role || 'user',
-        created_at: authUser.created_at
-      } as User))
     } catch (err) {
-      console.error('[AuthContext] Fatal auth error:', err)
+      console.error('[AuthContext] API auth error:', err)
       setUser(null)
     } finally {
       setLoading(false)
@@ -73,25 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshUser()
 
+    // We still keep the listener for logout/login events in same tab
     if (isSupabaseConfigured()) {
-      const supabase = getSupabase()
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-        console.log('[AuthContext] auth event:', event)
-        if (session?.user) {
-          const { data } = await userService.getUserById(session.user.id)
-          setUser(data || ({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-            role: session.user.user_metadata?.role || 'user',
-            created_at: session.user.created_at
-          } as User))
-        } else {
-          setUser(null)
+      const { data: authListener } = getSupabase().auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') {
+           setUser(null)
+           setLoading(false)
+        } else if (event === 'SIGNED_IN') {
+           refreshUser()
         }
-        setLoading(false)
       })
-
       return () => {
         authListener.subscription.unsubscribe()
       }
@@ -99,10 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = async () => {
-    if (isSupabaseConfigured()) {
-      await getSupabase().auth.signOut()
+    try {
+      if (isSupabaseConfigured()) {
+        await getSupabase().auth.signOut()
+      }
       setUser(null)
       router.push('/')
+    } catch (err) {
+      window.location.href = '/'
     }
   }
 

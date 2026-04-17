@@ -1,22 +1,22 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { userService } from '@/services/database.service'
 
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ success: false, error: 'Config missing' }, { status: 500 })
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get(name: string) { return cookieStore.get(name)?.value },
+      },
+    })
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
@@ -24,14 +24,26 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userData, error: dbError } = await userService.getUserById(user.id)
+    // Use a direct query here to avoid service dependencies for the most stable result
+    const { data: userData, error: dbError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single()
     
-    if (dbError) {
-      return NextResponse.json({ success: false, error: dbError.message }, { status: 400 })
-    }
-
-    return NextResponse.json({ success: true, data: userData })
+    // Return either the DB user or the Auth user as fallback
+    return NextResponse.json({ 
+      success: true, 
+      data: userData || {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || '',
+        role: user.user_metadata?.role || 'user',
+        created_at: user.created_at
+      } 
+    })
   } catch (error: any) {
+    console.error('[API/auth/me] Error:', error.message)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
