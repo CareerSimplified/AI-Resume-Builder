@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation'
 import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [resumes, setResumes] = useState<Resume[]>([])
   const [stats, setStats] = useState({
@@ -23,29 +23,31 @@ export default function DashboardPage() {
     totalReports: 0,
     totalJobDescriptions: 0,
   })
-  const [loadingContent, setLoadingContent] = useState(true)
+  const [loadingContent, setLoadingContent] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchDashboardData = useCallback(async (userId: string) => {
+    console.log('[Dashboard] fetchDashboardData started for:', userId)
     try {
       setLoadingContent(true)
       setError(null)
       
       const [resumesRes, statsRes] = await Promise.all([
         resumeService.getByUserId(userId).catch(err => {
-          console.error('Error fetching resumes:', err)
+          console.error('[Dashboard] Error fetching resumes:', err)
           return { data: [], error: err }
         }),
         userService.getUserStats(userId).catch(err => {
-          console.error('Error fetching stats:', err)
+          console.error('[Dashboard] Error fetching stats:', err)
           return { totalResumes: 0, totalReports: 0, totalJobDescriptions: 0 }
         })
       ])
       
       setResumes(resumesRes.data || [])
       setStats(statsRes as any)
+      console.log('[Dashboard] Data fetched successfully')
     } catch (err: any) {
-      console.error('Error in fetchDashboardData:', err)
+      console.error('[Dashboard] Error in fetchDashboardData:', err)
       setError('Failed to load dashboard data. Please check your connection.')
     } finally {
       setLoadingContent(false)
@@ -53,22 +55,37 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (!loading) {
+    console.log('[Dashboard] useEffect triggered, authLoading:', authLoading, 'user:', !!user)
+    if (!authLoading) {
       if (!user) {
+        console.log('[Dashboard] No user found, redirecting to login...')
         router.push('/auth/login')
       } else {
         fetchDashboardData(user.id)
       }
     }
-  }, [user, loading, router, fetchDashboardData])
+  }, [user, authLoading, router, fetchDashboardData])
 
-  if (loading || (loadingContent && !error)) {
+  if (authLoading) {
     return (
       <DashboardLayout sidebarItems={sidebarItems}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400 animate-pulse text-sm font-medium">Preparing your workspace...</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Authenticating...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (loadingContent && !error) {
+    return (
+      <DashboardLayout sidebarItems={sidebarItems}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400 animate-pulse text-sm font-medium">Fetching dashboard data...</p>
           </div>
         </div>
       </DashboardLayout>
