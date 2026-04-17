@@ -6,17 +6,17 @@ export const dynamic = 'force-dynamic'
 
 async function extractTextFromBuffer(buffer: Buffer) {
   const _require = createRequire(import.meta.url)
-  const pdfjs = _require('pdfjs-dist')
+  // Use the legacy build which is Node-friendly and doesn't require a worker
+  const pdfjs = _require('pdfjs-dist/legacy/build/pdf.js')
   
-  // CRITICAL: Disable the worker for server-side environments to avoid path resolution errors
-  // We use the synchronous-ish loading task on the main thread for these small-to-medium PDFs
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
     disableFontFace: true,
     nativeImageDecoderSupport: 'none',
     maxImageSize: -1,
-    disableWorker: true, // Forces execution without an external worker file
+    disableWorker: true, // Self-contained in v3 legacy
+    verbosity: 0
   })
   
   const pdf = await loadingTask.promise
@@ -34,14 +34,30 @@ async function extractTextFromBuffer(buffer: Buffer) {
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 })
+    let file: File | null = null
+    
+    // Robust parsing
+    try {
+      const formData = await req.formData()
+      file = formData.get('file') as File
+    } catch (parseError) {
+      console.warn('[API/extract-text] FormData parsing failed, trying Blob fallback...')
+      try {
+        const blob = await req.blob()
+        if (blob && blob.size > 0) {
+          const arrayBuffer = await blob.arrayBuffer()
+          const { text, pages } = await extractTextFromBuffer(Buffer.from(arrayBuffer))
+          return NextResponse.json({ success: true, text, pages })
+        }
+      } catch (blobError) {}
+      return NextResponse.json({ success: false, error: 'Malformed request body.' }, { status: 400 })
     }
 
-    console.log('[API/extract-text] Using PURE PDFJS (Worker Disabled) for:', file.name)
+    if (!file || file.size === 0) {
+      return NextResponse.json({ success: false, error: 'No file provided.' }, { status: 400 })
+    }
+
+    console.log('[API/extract-text] Extractive processing via PDFJS v3 Legacy for:', file.name)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
@@ -50,27 +66,22 @@ export async function POST(req: NextRequest) {
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-      
-      const { text, pages } = await extractTextFromBuffer(buffer)
+      const { text, pages } = await extractTextFromBuffer(Buffer.from(arrayBuffer))
       
       if (!text) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'The PDF content is empty or contains only images (scanned document).' 
-        }, { status: 422 })
+        return NextResponse.json({ success: false, error: 'No readable text content found in PDF.' }, { status: 422 })
       }
 
-      console.log('[API/extract-text] Success, extracted', text.length, 'chars')
+      console.log('[API/extract-text] Extraction Complete:', text.length, 'chars')
       return NextResponse.json({ success: true, text, pages })
     }
 
-    return NextResponse.json({ success: false, error: 'Unsupported file type' }, { status: 400 })
+    return NextResponse.json({ success: false, error: 'Unsupported file type.' }, { status: 400 })
   } catch (error: any) {
     console.error('[API/extract-text] Fatal Error:', error.message)
     return NextResponse.json({ 
       success: false, 
-      error: `Extraction failed: ${error.message || 'Corrupted file or processing error'}` 
+      error: `Extraction failed: ${error.message}` 
     }, { status: 500 })
   }
 }

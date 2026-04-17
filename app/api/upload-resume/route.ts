@@ -20,9 +20,7 @@ async function getServerSupabase() {
 
 async function extractTextFromBuffer(buffer: Buffer) {
   const _require = createRequire(import.meta.url)
-  const pdfjs = _require('pdfjs-dist')
-  
-  // Forces execution without worker file for Vercel/Serverless
+  const pdfjs = _require('pdfjs-dist/legacy/build/pdf.js')
   const loadingTask = pdfjs.getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
@@ -30,43 +28,47 @@ async function extractTextFromBuffer(buffer: Buffer) {
     nativeImageDecoderSupport: 'none',
     maxImageSize: -1,
     disableWorker: true,
+    verbosity: 0
   })
-  
   const pdf = await loadingTask.promise
   let fullText = ''
-  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const textContent = await page.getTextContent()
     const pageText = textContent.items.map((item: any) => item.str).join(' ')
     fullText += pageText + ' \n'
   }
-  
   return fullText.trim()
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-    const jdId = formData.get('jdId') as string
-    const userId = formData.get('userId') as string
-    let extractedText = formData.get('extractedText') as string
+    let file: File | null = null
+    let jdId: string | null = null
+    let userId: string | null = null
+    let extractedText: string | null = null
 
-    if (!file || !jdId || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    try {
+      const formData = await req.formData()
+      file = formData.get('file') as File
+      jdId = formData.get('jdId') as string
+      userId = formData.get('userId') as string
+      extractedText = formData.get('extractedText') as string
+    } catch (e) {
+      return NextResponse.json({ error: 'Failed to parse request body.' }, { status: 400 })
     }
 
-    console.log('[API/upload-resume] Uploading for user:', userId)
+    if (!file || file.size === 0 || !jdId || !userId) {
+      return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
+    }
 
-    // FALLBACK: If extraction was not done or is too short, do it here with PURE PDFJS
+    // FALLBACK: If extraction missing, do it here with v3 Legacy
     if (!extractedText || extractedText === 'undefined' || extractedText.length < 10) {
-      console.log('[API/upload-resume] Fallback extraction starting with PURE PDFJS...')
+      console.log('[API/upload-resume] Fallback extraction via v3 Legacy starting...')
       try {
         if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
           const arrayBuffer = await file.arrayBuffer()
           extractedText = await extractTextFromBuffer(Buffer.from(arrayBuffer))
-          console.log('[API/upload-resume] Fallback extraction successful:', extractedText.length)
         } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
           extractedText = await file.text()
         }
@@ -76,9 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!extractedText || extractedText.length < 10) {
-      return NextResponse.json({ 
-        error: 'Unable to read resume content. Please ensure the file is a valid PDF or Text file.' 
-      }, { status: 422 })
+      return NextResponse.json({ error: 'Unable to read resume content.' }, { status: 422 })
     }
 
     const fileName = `${userId}/${Date.now()}-${file.name}`
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Storage Upload
     if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Server storage configuration error' }, { status: 500 })
+      return NextResponse.json({ error: 'Storage configuration error.' }, { status: 500 })
     }
 
     const { error: uploadError } = await supabaseAdmin
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!resumeData) {
-      return NextResponse.json({ error: 'Failed to record resume in database' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to record resume record.' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, resume: resumeData })

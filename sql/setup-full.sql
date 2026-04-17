@@ -60,74 +60,56 @@ ALTER TABLE public.job_descriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resumes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
--- Helper function to check if user is admin (avoids RLS recursion)
-CREATE OR REPLACE FUNCTION public.is_admin() 
-RETURNS boolean AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.users
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-$$ LANGUAGE sql SECURITY DEFINER;
+-- 3. Create RLS Policies (Non-Recursive)
 
--- 3. Create RLS Policies
-
--- Users: own data access + admin access
-CREATE POLICY "Users and admins can view profiles" ON public.users FOR SELECT
-  USING (auth.uid() = id OR public.is_admin());
+-- Users: own data access (No is_admin check here to avoid recursion)
+CREATE POLICY "Users can view own profile" ON public.users FOR SELECT
+  USING (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE 
   USING (auth.uid() = id);
 
 -- Job Descriptions: user owns their records
 CREATE POLICY "Users can view own job descriptions" ON public.job_descriptions FOR SELECT 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own job descriptions" ON public.job_descriptions FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own job descriptions" ON public.job_descriptions FOR UPDATE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own job descriptions" ON public.job_descriptions FOR DELETE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 -- Resumes: user owns their records
 CREATE POLICY "Users can view own resumes" ON public.resumes FOR SELECT 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own resumes" ON public.resumes FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own resumes" ON public.resumes FOR UPDATE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own resumes" ON public.resumes FOR DELETE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 -- Reports: user owns their records
 CREATE POLICY "Users can view own reports" ON public.reports FOR SELECT 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own reports" ON public.reports FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own reports" ON public.reports FOR UPDATE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own reports" ON public.reports FOR DELETE 
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id);
 
--- 4. Admin Analytics View (used by database.ts types and admin panel)
-DROP VIEW IF EXISTS public.admin_analytics;
-CREATE VIEW public.admin_analytics AS
-SELECT
-  (SELECT COUNT(*) FROM public.users WHERE role = 'user')::integer AS total_users,
-  (SELECT COUNT(*) FROM public.resumes)::integer               AS total_resumes,
-  (SELECT COUNT(*) FROM public.reports)::integer               AS total_reports,
-  (SELECT COUNT(*) FROM public.job_descriptions)::integer      AS total_job_descriptions;
-
--- Grant read access on the view to authenticated role
-GRANT SELECT ON public.admin_analytics TO authenticated;
+-- 4. Admin View (Bypasses RLS logic via separate grant or admin client)
+-- We'll use the Admin Client (service_role) for all admin operations to avoid RLS complexity.
 
 -- 5. Create Trigger for automatic profile creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -156,11 +138,6 @@ CREATE TRIGGER on_auth_user_created
 INSERT INTO storage.buckets (id, name, public) VALUES ('resumes', 'resumes', true) ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for resumes bucket
-DROP POLICY IF EXISTS "Anyone can upload resume" ON storage.objects;
-DROP POLICY IF EXISTS "Anyone can view resume" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own resume" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own resume" ON storage.objects;
-
 DROP POLICY IF EXISTS "Users can upload resumes" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view resumes" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update own resumes" ON storage.objects;
