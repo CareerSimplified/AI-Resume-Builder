@@ -1,29 +1,35 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 
-// Standard client initialization without Proxy to avoid 'this' binding complexity
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Function to create or get the Supabase client - perfectly lazy
+export function getSupabase(): SupabaseClient<Database> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Helper to check if client can be initialized
-export const isSupabaseConfigured = () => !!supabaseUrl && !!supabaseAnonKey
-
-// The client instance
-export const supabase: SupabaseClient<Database> = (function() {
-  if (!isSupabaseConfigured()) {
-    console.warn('[Supabase] Missing environment variables. Client will be non-functional.')
-    // Return a dummy object that safe-guarded against property access if possible
-    // But for simplicity, we return something that doesn't crash on export
-    return {} as any
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (typeof window !== 'undefined') {
+      console.error('[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    }
+    // Return a proxy that just logs errors when you try to use it
+    // This prevents the whole app from crashing at import time
+    return new Proxy({} as any, {
+      get() {
+        return () => {
+          throw new Error('Supabase client not configured. Check your environment variables.')
+        }
+      }
+    })
   }
 
-  if (typeof window === 'undefined') {
-    return createClient<Database>(supabaseUrl!, supabaseAnonKey!)
-  }
+  // Create client (Next.js createBrowserClient handles the window/singleton check for us)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+}
 
-  return createBrowserClient<Database>(supabaseUrl!, supabaseAnonKey!)
-})()
+// Named export for convenience - THIS IS NOW A FUNCTION CALL
+// We use a getter to make it behave like a constant but evaluate lazily
+export const supabase = getSupabase()
 
-export const getSupabase = () => supabase
-export const getSupabaseClient = () => supabase
+export const isSupabaseConfigured = () => {
+  return !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+}
