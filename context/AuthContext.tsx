@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import { User } from '@/types'
 import { supabase } from '@/lib/supabase'
 import { userService } from '@/services/database.service'
@@ -22,19 +22,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const hasInitialized = useRef(false)
 
   const refreshUser = async () => {
+    console.log('[AuthContext] refreshUser started')
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      if (sessionError || !session) {
+      if (sessionError) {
+        console.error('[AuthContext] Session error:', sessionError)
+      }
+
+      if (!session) {
+        console.log('[AuthContext] No session found')
         setUser(null)
         setLoading(false)
         return
       }
 
+      console.log('[AuthContext] Session found for user:', session.user.id)
+
       const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
       if (userError || !authUser) {
+        console.error('[AuthContext] User error:', userError)
         setUser(null)
         setLoading(false)
         return
@@ -43,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data: userData, error: dbError } = await userService.getUserById(authUser.id)
         if (dbError) {
-          console.error('[AuthContext] Error fetching user profile:', dbError)
+          console.error('[AuthContext] Error fetching user profile from DB:', dbError)
         }
         
         setUser(userData || ({
@@ -67,15 +77,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('[AuthContext] Unexpected error in refreshUser:', err)
       setUser(null)
     } finally {
+      console.log('[AuthContext] refreshUser finished, setting loading=false')
       setLoading(false)
+      hasInitialized.current = true
     }
   }
 
   useEffect(() => {
-    refreshUser()
+    if (!hasInitialized.current) {
+        refreshUser()
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      console.log('[AuthContext] Auth state change event:', event)
+      console.log('[AuthContext] onAuthStateChange event:', event)
       
       try {
         if (session?.user) {
