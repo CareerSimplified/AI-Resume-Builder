@@ -81,23 +81,31 @@ export default function UploadResumePage() {
       }
       console.log('✓ Auth session verified, user:', sessionData.session.user.id)
 
-      console.log('Step 1: Extracting text from file...')
-      const extractedText = await fileService.extractTextFromFile(selectedFile)
-      console.log('✓ Text extracted successfully, length:', extractedText.length)
-      setAnalysisStep(2) // Step 2: Uploading
+      // Step 1: Extract Text (Internal API)
+      setAnalysisStep(1)
+      let extractedText = ''
+      try {
+        console.log('Step 1: Attempting text extraction...')
+        extractedText = await fileService.extractTextFromFile(selectedFile)
+        console.log('✓ Text extracted successfully, length:', extractedText.length)
+      } catch (extractErr: any) {
+        console.warn('Step 1: Client extraction failed, will attempt server-side fallback:', extractErr.message)
+      }
 
-      // Step 2: Upload file and save to database using server API
-      console.log('Step 2: Uploading file and saving to database...')
-      
-      const uploadFormData = new FormData()
-      uploadFormData.append('file', selectedFile)
-      uploadFormData.append('jdId', jdId)
-      uploadFormData.append('userId', user.id)
-      uploadFormData.append('extractedText', extractedText)
+      // Step 2: Upload File & Save to DB
+      setAnalysisStep(2)
+      console.log('Step 2: Uploading file and saving records...')
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('jdId', jdId)
+      formData.append('userId', user.id)
+      if (extractedText) {
+        formData.append('extractedText', extractedText)
+      }
 
       const uploadResponse = await fetch('/api/upload-resume', {
         method: 'POST',
-        body: uploadFormData,
+        body: formData,
       })
 
       const uploadResult = await uploadResponse.json()
