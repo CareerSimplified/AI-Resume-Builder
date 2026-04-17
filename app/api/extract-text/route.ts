@@ -15,8 +15,10 @@ export async function POST(req: NextRequest) {
     const uint8Array = new Uint8Array(arrayBuffer)
 
     // Configure worker for server-side execution
-    const workerPath = path.join(process.cwd(), 'public', 'pdf.worker.min.js')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerPath
+    const workerSrc = process.env.NODE_ENV === 'production'
+      ? '/pdf.worker.min.js'
+      : path.join(process.cwd(), 'public', 'pdf.worker.min.js')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
     const loadingTask = pdfjsLib.getDocument({
       data: uint8Array,

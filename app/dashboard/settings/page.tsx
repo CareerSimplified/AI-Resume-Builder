@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, FileText, Plus, BarChart3, Settings } from 'lucide-react'
+import { Home, FileText, Plus, BarChart3, Settings, LucideIcon } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardHeader, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
@@ -10,13 +10,13 @@ import { useToast } from '@/hooks/useToast'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const sidebarItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: <Home className="w-5 h-5" /> },
-  { label: 'Create JD', href: '/dashboard/create-jd', icon: <Plus className="w-5 h-5" /> },
-  { label: 'Upload Resume', href: '/dashboard/upload-resume', icon: <FileText className="w-5 h-5" /> },
-  { label: 'My Resumes', href: '/dashboard/my-resumes', icon: <FileText className="w-5 h-5" /> },
-  { label: 'Reports', href: '/dashboard/reports', icon: <BarChart3 className="w-5 h-5" /> },
-  { label: 'Settings', href: '/dashboard/settings', icon: <Settings className="w-5 h-5" /> },
+const sidebarItems: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: Home },
+  { label: 'Create JD', href: '/dashboard/create-jd', icon: Plus },
+  { label: 'Upload Resume', href: '/dashboard/upload-resume', icon: FileText },
+  { label: 'My Resumes', href: '/dashboard/my-resumes', icon: FileText },
+  { label: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
+  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
 export default function SettingsPage() {
