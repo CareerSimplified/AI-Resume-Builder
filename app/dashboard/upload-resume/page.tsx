@@ -137,9 +137,12 @@ export default function UploadResumePage() {
       }
 
       const analysisResult = await analysisResponse.json()
+      if (!analysisResult.success) {
+        throw new Error(analysisResult.error || 'AI analysis step failed')
+      }
       console.log('✓ Analysis complete:', analysisResult)
       
-      success('Analysis complete!')
+      success('Analysis complete! Redirecting to report...')
       router.push(`/dashboard/reports/${resumeId}`)
     } catch (err: any) {
       console.error('Full error:', err)

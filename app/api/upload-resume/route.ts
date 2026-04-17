@@ -1,7 +1,21 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+
+async function getServerSupabase() {
+  const cookieStore = await cookies()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) return null
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) { return cookieStore.get(name)?.value },
+      set(name: string, value: string, options: CookieOptions) { cookieStore.set({ name, value, ...options }) },
+      remove(name: string, options: CookieOptions) { cookieStore.set({ name, value: '', ...options }) },
+    },
+  })
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,24 +26,17 @@ export async function POST(req: NextRequest) {
     const extractedText = formData.get('extractedText') as string
 
     if (!file || !jdId || !userId || !extractedText) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
-    console.log('[upload-resume API] Starting upload for user:', userId)
-
-    // Step 1: Upload to Supabase storage using admin client
+    console.log('[API/upload-resume] Starting upload for user:', userId)
     const fileName = `${userId}/${Date.now()}-${file.name}`
     const fileBuffer = Buffer.from(await file.arrayBuffer())
+
+    // 1. Storage Upload (Always use Admin for storage to avoid complex RLS hurdles during upload)
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Server storage configuration error' }, { status: 500 })
+    }
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin
       .storage
@@ -40,57 +47,56 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('[upload-resume API] Storage upload error:', uploadError)
-      return NextResponse.json(
-        { error: `Failed to upload file: ${uploadError.message}` },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: `Storage error: ${uploadError.message}` }, { status: 500 })
     }
 
-    console.log('[upload-resume API] File uploaded to storage:', uploadData.path)
-
-    // Step 2: Get public URL
-    const { data: urlData } = supabaseAdmin
-      .storage
-      .from('resumes')
-      .getPublicUrl(fileName)
-
+    const { data: urlData } = supabaseAdmin.storage.from('resumes').getPublicUrl(fileName)
     const fileUrl = urlData.publicUrl
-    console.log('[upload-resume API] Public URL generated:', fileUrl)
 
-    // Step 3: Save to database using admin client (bypasses RLS)
-    const { data: resumeData, error: dbError } = await supabaseAdmin
-      .from('resumes')
-      .insert({
-        user_id: userId,
-        jd_id: jdId,
-        file_url: fileUrl,
-        file_name: file.name,
-        extracted_text: extractedText,
-      })
-      .select()
-      .single()
-
-    if (dbError) {
-      console.error('[upload-resume API] Database error:', dbError)
-      return NextResponse.json(
-        { error: `Failed to save resume: ${dbError.message}` },
-        { status: 500 }
-      )
+    // 2. Database Save
+    let resumeData = null;
+    const supabase = await getServerSupabase()
+    
+    // Try user session
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('resumes')
+        .insert({
+          user_id: userId,
+          jd_id: jdId,
+          file_url: fileUrl,
+          file_name: file.name,
+          extracted_text: extractedText,
+        })
+        .select()
+        .single()
+      
+      if (data) resumeData = data
     }
 
-    console.log('[upload-resume API] Resume saved to database, ID:', resumeData.id)
+    // Fallback Admin
+    if (!resumeData && supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from('resumes')
+        .insert({
+          user_id: userId,
+          jd_id: jdId,
+          file_url: fileUrl,
+          file_name: file.name,
+          extracted_text: extractedText,
+        })
+        .select()
+        .single()
+      
+      if (data) resumeData = data
+    }
 
-    return NextResponse.json({
-      success: true,
-      resume: resumeData,
-      message: 'Resume uploaded and saved successfully'
-    })
+    if (!resumeData) {
+      return NextResponse.json({ error: 'Failed to record resume in database' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, resume: resumeData })
   } catch (error: any) {
-    console.error('[upload-resume API] Fatal error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to upload resume' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
