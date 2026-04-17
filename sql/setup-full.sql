@@ -62,29 +62,57 @@ ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
 -- 3. Create RLS Policies
 
--- Users
+-- Users: own data access
 CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
 
--- Job Descriptions
+-- Admin: can read ALL users
+CREATE POLICY "Admins can view all users" ON public.users FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+
+-- Job Descriptions: user owns their records
 CREATE POLICY "Users can view own job descriptions" ON public.job_descriptions FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own job descriptions" ON public.job_descriptions FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own job descriptions" ON public.job_descriptions FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own job descriptions" ON public.job_descriptions FOR DELETE USING (auth.uid() = user_id);
 
--- Resumes
+-- Admin: can read ALL job descriptions
+CREATE POLICY "Admins can view all job descriptions" ON public.job_descriptions FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+
+-- Resumes: user owns their records
 CREATE POLICY "Users can view own resumes" ON public.resumes FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own resumes" ON public.resumes FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own resumes" ON public.resumes FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own resumes" ON public.resumes FOR DELETE USING (auth.uid() = user_id);
 
--- Reports
+-- Admin: can read ALL resumes
+CREATE POLICY "Admins can view all resumes" ON public.resumes FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+
+-- Reports: user owns their records
 CREATE POLICY "Users can view own reports" ON public.reports FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own reports" ON public.reports FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own reports" ON public.reports FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own reports" ON public.reports FOR DELETE USING (auth.uid() = user_id);
 
--- 4. Create Trigger for automatic profile creation
+-- Admin: can read ALL reports
+CREATE POLICY "Admins can view all reports" ON public.reports FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'));
+
+-- 4. Admin Analytics View (used by database.ts types and admin panel)
+DROP VIEW IF EXISTS public.admin_analytics;
+CREATE VIEW public.admin_analytics AS
+SELECT
+  (SELECT COUNT(*) FROM public.users WHERE role = 'user')::integer AS total_users,
+  (SELECT COUNT(*) FROM public.resumes)::integer               AS total_resumes,
+  (SELECT COUNT(*) FROM public.reports)::integer               AS total_reports,
+  (SELECT COUNT(*) FROM public.job_descriptions)::integer      AS total_job_descriptions;
+
+-- Grant read access on the view to authenticated role
+GRANT SELECT ON public.admin_analytics TO authenticated;
+
+-- 5. Create Trigger for automatic profile creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
@@ -94,7 +122,8 @@ BEGIN
     new.email,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     COALESCE(new.raw_user_meta_data->>'role', 'user')
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -105,7 +134,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 5. Storage policies
+-- 6. Storage policies
 -- Create resumes bucket if it doesn't exist
 INSERT INTO storage.buckets (id, name, public) VALUES ('resumes', 'resumes', true) ON CONFLICT (id) DO NOTHING;
 
@@ -114,6 +143,11 @@ DROP POLICY IF EXISTS "Anyone can upload resume" ON storage.objects;
 DROP POLICY IF EXISTS "Anyone can view resume" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update own resume" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete own resume" ON storage.objects;
+
+DROP POLICY IF EXISTS "Users can upload resumes" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view resumes" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own resumes" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own resumes" ON storage.objects;
 
 CREATE POLICY "Users can upload resumes"
   ON storage.objects

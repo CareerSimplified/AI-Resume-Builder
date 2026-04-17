@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(req: NextRequest) {
   try {
-    // Note: We use the client supabase here but in a real app 
-    // we would use a service role client to bypass RLS or ensure admin check
-    const { data, error } = await supabase
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Admin credentials not configured' },
+        { status: 500 }
+      )
+    }
+    // Use service-role admin client to bypass RLS and read all reports
+    const { data, error } = await supabaseAdmin
       .from('reports')
       .select('*')
       .order('created_at', { ascending: false })

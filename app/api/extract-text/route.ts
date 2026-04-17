@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import * as pdfjsLib from 'pdfjs-dist'
-import path from 'path'
+import { createRequire } from 'module'
+
+// pdf-parse ships CJS only. With moduleResolution:"bundler" TypeScript resolves
+// the ESM stub which has no default export, so we load it via createRequire.
+const _require = createRequire(import.meta.url)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> =
+  _require('pdf-parse')
+
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,43 +16,53 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File
 
     if (!file) {
-      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
+        { status: 400 }
+      )
+    }
+
+    // Validate file type
+    if (file.type && file.type !== 'application/pdf') {
+      return NextResponse.json(
+        { success: false, error: 'Only PDF files are supported' },
+        { status: 400 }
+      )
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
+    const buffer = Buffer.from(arrayBuffer)
 
-    // Configure worker for server-side execution
-    const workerSrc = process.env.NODE_ENV === 'production'
-      ? '/pdf.worker.min.js'
-      : path.join(process.cwd(), 'public', 'pdf.worker.min.js')
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
+    const data = await pdfParse(buffer)
+    const text = data.text?.trim()
 
-    const loadingTask = pdfjsLib.getDocument({
-      data: uint8Array,
-      disableRange: true,
-    });
-
-    const pdf = await loadingTask.promise
-    let fullText = ''
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-
-      fullText += pageText + '\n'
+    if (!text) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Could not extract text from this PDF. The file may be scanned/image-based.',
+        },
+        { status: 422 }
+      )
     }
 
-    return NextResponse.json({ success: true, text: fullText })
-  } catch (error: any) {
-    const isDev = process.env.NODE_ENV === 'development'
-    if (isDev) console.error('Extract Text Error:', error)
     return NextResponse.json({
-      success: false,
-      error: isDev ? `Service Error: ${error.message}` : 'Failed to process file. Please try again.'
-    }, { status: 500 })
+      success: true,
+      text,
+      pages: data.numpages,
+    })
+  } catch (error: any) {
+    console.error('Extract Text Error:', error?.message || error)
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          process.env.NODE_ENV === 'development'
+            ? `Service Error: ${error?.message}`
+            : 'Failed to process file. Please try again.',
+      },
+      { status: 500 }
+    )
   }
 }
