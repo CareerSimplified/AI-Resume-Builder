@@ -15,10 +15,13 @@ if (typeof global.DOMMatrix === 'undefined') {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function extractTextFromBuffer(buffer: Uint8Array) {
+async function extractTextFromBuffer(buffer: any) {
   const { getDocumentProxy, extractText } = await import('unpdf')
   
-  const pdf = await getDocumentProxy(buffer)
+  // Ensure we have a pure Uint8Array (unpdf 1.6+ is strict about this on Vercel)
+  const binaryData = new Uint8Array(buffer instanceof ArrayBuffer ? buffer : buffer.buffer || buffer)
+  
+  const pdf = await getDocumentProxy(binaryData)
   const { text } = await extractText(pdf)
   
   const finalText = Array.isArray(text) ? text.join(' ') : text
