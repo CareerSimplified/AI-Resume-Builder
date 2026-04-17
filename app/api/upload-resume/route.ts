@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
-import { v4 as uuidv4 } from 'uuid'
 
 export async function POST(req: NextRequest) {
   try {
