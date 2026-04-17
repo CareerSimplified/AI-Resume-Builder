@@ -32,7 +32,8 @@ async function extractTextFromBuffer(buffer: Uint8Array) {
   const { getDocumentProxy, extractText } = await import('unpdf')
   const pdf = await getDocumentProxy(buffer)
   const { text } = await extractText(pdf)
-  return text.trim()
+  const finalText = Array.isArray(text) ? text.join(' ') : text
+  return finalText.trim()
 }
 
 

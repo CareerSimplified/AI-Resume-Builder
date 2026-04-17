@@ -21,7 +21,8 @@ async function extractTextFromBuffer(buffer: Uint8Array) {
   const pdf = await getDocumentProxy(buffer)
   const { text } = await extractText(pdf)
   
-  return { text: text.trim(), pages: pdf.numPages }
+  const finalText = Array.isArray(text) ? text.join(' ') : text
+  return { text: finalText.trim(), pages: pdf.numPages }
 }
 
 export async function POST(req: NextRequest) {
