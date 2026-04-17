@@ -2,7 +2,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { createRequire } from 'module'
 
 async function getServerSupabase() {
   const cookieStore = await cookies()
@@ -18,27 +17,11 @@ async function getServerSupabase() {
   })
 }
 
-async function extractTextFromBuffer(buffer: Buffer) {
-  const _require = createRequire(import.meta.url)
-  const pdfjs = _require('pdfjs-dist/legacy/build/pdf.js')
-  const loadingTask = pdfjs.getDocument({
-    data: new Uint8Array(buffer),
-    useSystemFonts: true,
-    disableFontFace: true,
-    nativeImageDecoderSupport: 'none',
-    maxImageSize: -1,
-    disableWorker: true,
-    verbosity: 0
-  })
-  const pdf = await loadingTask.promise
-  let fullText = ''
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const textContent = await page.getTextContent()
-    const pageText = textContent.items.map((item: any) => item.str).join(' ')
-    fullText += pageText + ' \n'
-  }
-  return fullText.trim()
+async function extractTextFromBuffer(buffer: Uint8Array) {
+  const { getDocumentProxy, extractText } = await import('unpdf')
+  const pdf = await getDocumentProxy(buffer)
+  const { text } = await extractText(pdf)
+  return text.trim()
 }
 
 export async function POST(req: NextRequest) {
@@ -54,39 +37,35 @@ export async function POST(req: NextRequest) {
       jdId = formData.get('jdId') as string
       userId = formData.get('userId') as string
       extractedText = formData.get('extractedText') as string
-    } catch (e) {
-      return NextResponse.json({ error: 'Failed to parse request body.' }, { status: 400 })
-    }
+    } catch (e) {}
 
     if (!file || file.size === 0 || !jdId || !userId) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
     }
 
-    // FALLBACK: If extraction missing, do it here with v3 Legacy
+    // FALLBACK: If extraction missing, do it here with UNPDF
     if (!extractedText || extractedText === 'undefined' || extractedText.length < 10) {
-      console.log('[API/upload-resume] Fallback extraction via v3 Legacy starting...')
       try {
         if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
           const arrayBuffer = await file.arrayBuffer()
-          extractedText = await extractTextFromBuffer(Buffer.from(arrayBuffer))
+          extractedText = await extractTextFromBuffer(new Uint8Array(arrayBuffer))
         } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
           extractedText = await file.text()
         }
       } catch (extErr: any) {
-        console.error('[API/upload-resume] Fallback extraction failed:', extErr.message)
+        console.error('[API/upload-resume] Fallback Error:', extErr.message)
       }
     }
 
     if (!extractedText || extractedText.length < 10) {
-      return NextResponse.json({ error: 'Unable to read resume content.' }, { status: 422 })
+      return NextResponse.json({ error: 'Unable to read content.' }, { status: 422 })
     }
 
     const fileName = `${userId}/${Date.now()}-${file.name}`
     const fileBuffer = Buffer.from(await file.arrayBuffer())
 
-    // 1. Storage Upload
     if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Storage configuration error.' }, { status: 500 })
+      return NextResponse.json({ error: 'Storage error.' }, { status: 500 })
     }
 
     const { error: uploadError } = await supabaseAdmin
@@ -104,8 +83,6 @@ export async function POST(req: NextRequest) {
     const { data: urlData } = supabaseAdmin.storage.from('resumes').getPublicUrl(fileName)
     const fileUrl = urlData.publicUrl
 
-    // 2. Database Save
-    let resumeData = null;
     const supabase = await getServerSupabase()
     const dbPayload = {
       user_id: userId,
@@ -115,6 +92,7 @@ export async function POST(req: NextRequest) {
       extracted_text: extractedText,
     }
 
+    let resumeData = null
     if (supabase) {
       const { data } = await supabase.from('resumes').insert(dbPayload).select().single()
       if (data) resumeData = data
@@ -126,12 +104,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!resumeData) {
-      return NextResponse.json({ error: 'Failed to record resume record.' }, { status: 500 })
+      return NextResponse.json({ error: 'Database save failed.' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, resume: resumeData })
   } catch (error: any) {
-    console.error('[API/upload-resume] Fatal Error:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
