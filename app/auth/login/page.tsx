@@ -154,7 +154,13 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <Button type="submit" fullWidth loading={loading} size="lg">
+            <Button 
+              type="submit" 
+              fullWidth 
+              loading={loading} 
+              size="lg"
+              disabled={!email || !password || loading}
+            >
               Sign In
               <ArrowRightIcon />
             </Button>

@@ -59,7 +59,7 @@ export default function CreateJDPage() {
       const { error: submitError } = await jobDescriptionService.create(user.id, {
         title: formData.title,
         company: formData.company,
-        skills: formData.skills.split(',').map((s) => s.trim()),
+        skills: formData.skills ? formData.skills.split(',').map((s) => s.trim()).filter(Boolean) : [],
         experience: formData.experience,
         description: formData.description,
       })
