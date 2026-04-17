@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createRequire } from 'module'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function extractTextFromBuffer(buffer: Uint8Array) {
-  // Use unpdf which is the recommended wrapper for serverless/Vercel
-  // It handles the PDFJS worker and environment issues automatically
-  const { getDocumentProxy, extractText } = await import('unpdf')
+async function extractTextFromBuffer(buffer: Buffer) {
+  const _require = createRequire(import.meta.url)
+  const pdf = _require('pdf-parse')
   
-  const pdf = await getDocumentProxy(buffer)
-  const { text } = await extractText(pdf)
-  
-  return { text: text.trim(), pages: pdf.numPages }
+  try {
+    const data = await pdf(buffer)
+    return { 
+      text: data.text || '', 
+      pages: data.numpages || 0 
+    }
+  } catch (err: any) {
+    console.error('[PDF-Parse Error]:', err.message)
+    throw new Error(`Failed to parse PDF: ${err.message}`)
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -24,7 +30,7 @@ export async function POST(req: NextRequest) {
       const blob = await req.blob()
       if (blob && blob.size > 0) {
         const arrayBuffer = await blob.arrayBuffer()
-        const { text, pages } = await extractTextFromBuffer(new Uint8Array(arrayBuffer))
+        const { text, pages } = await extractTextFromBuffer(Buffer.from(arrayBuffer))
         return NextResponse.json({ success: true, text, pages })
       }
     }
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided.' }, { status: 400 })
     }
 
-    console.log('[API/extract-text] Processing with unpdf/pdfjs:', file.name)
+    console.log('[API/extract-text] Processing with pdf-parse:', file.name)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()
@@ -42,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       const arrayBuffer = await file.arrayBuffer()
-      const { text, pages } = await extractTextFromBuffer(new Uint8Array(arrayBuffer))
+      const { text, pages } = await extractTextFromBuffer(Buffer.from(arrayBuffer))
       
       if (!text) {
         return NextResponse.json({ success: false, error: 'The PDF has no readable text.' }, { status: 422 })

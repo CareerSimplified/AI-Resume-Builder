@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createRequire } from 'module'
 
 async function getServerSupabase() {
   const cookieStore = await cookies()
@@ -17,11 +18,16 @@ async function getServerSupabase() {
   })
 }
 
-async function extractTextFromBuffer(buffer: Uint8Array) {
-  const { getDocumentProxy, extractText } = await import('unpdf')
-  const pdf = await getDocumentProxy(buffer)
-  const { text } = await extractText(pdf)
-  return text.trim()
+async function extractTextFromBuffer(buffer: Buffer) {
+  const _require = createRequire(import.meta.url)
+  const pdf = _require('pdf-parse')
+  try {
+    const data = await pdf(buffer)
+    return data.text || ''
+  } catch (err: any) {
+    console.error('[PDF-Parse Error]:', err.message)
+    return ''
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -48,7 +54,7 @@ export async function POST(req: NextRequest) {
       try {
         if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
           const arrayBuffer = await file.arrayBuffer()
-          extractedText = await extractTextFromBuffer(new Uint8Array(arrayBuffer))
+          extractedText = await extractTextFromBuffer(Buffer.from(arrayBuffer))
         } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
           extractedText = await file.text()
         }
