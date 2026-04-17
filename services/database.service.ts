@@ -98,12 +98,13 @@ export const jobDescriptionService = {
 
 
   async getByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('job_descriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-    return { data: (data as JobDescription[]) || [], error }
+    try {
+      const response = await fetch(`/api/job-descriptions?userId=${userId}`)
+      const result = await response.json()
+      return { data: (result.data as JobDescription[]) || [], error: result.success ? null : new Error(result.error) }
+    } catch (err: any) {
+      return { data: [], error: err }
+    }
   },
 
   async getById(id: string) {
