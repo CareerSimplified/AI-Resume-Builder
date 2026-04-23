@@ -7,7 +7,7 @@ import { Card, CardHeader, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Badge } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
-import { resumeService, userService } from '@/services/database.service'
+import { resumeService, userService, reportService } from '@/services/database.service'
 import { Resume } from '@/types'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,6 +18,8 @@ export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [resumes, setResumes] = useState<Resume[]>([])
+  const [reports, setReports] = useState<any[]>([])
+  const [isProUser, setIsProUser] = useState(false)
   const [stats, setStats] = useState({
     totalResumes: 0,
     totalReports: 0,
@@ -32,7 +34,7 @@ export default function DashboardPage() {
       setLoadingContent(true)
       setError(null)
       
-      const [resumesRes, statsRes] = await Promise.all([
+      const [resumesRes, statsRes, reportsRes, userRes] = await Promise.all([
         resumeService.getByUserId(userId).catch(err => {
           console.error('[Dashboard] Error fetching resumes:', err)
           return { data: [], error: err }
@@ -40,10 +42,14 @@ export default function DashboardPage() {
         userService.getUserStats(userId).catch(err => {
           console.error('[Dashboard] Error fetching stats:', err)
           return { totalResumes: 0, totalReports: 0, totalJobDescriptions: 0 }
-        })
+        }),
+        reportService.getByUserId(userId).catch((err: any) => ({ data: [], error: err })),
+        userService.getUserById(userId)
       ])
       
       setResumes(resumesRes.data || [])
+      setReports(reportsRes.data || [])
+      setIsProUser((userRes.data as any)?.is_pro || false)
       setStats(statsRes as any)
       console.log('[Dashboard] Data fetched successfully')
     } catch (err: any) {
@@ -209,61 +215,76 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Recent Resumes */}
+        {/* Analysis History */}
         <div className="pt-4">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2">
-               Recent Resumes
-               <Badge variant="secondary" className="ml-2 font-normal text-xs">{resumes.length}</Badge>
+               Analysis History
+               <Badge variant="secondary" className="ml-2 font-normal text-xs">{reports.length}</Badge>
             </h2>
-            <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/5">
-              <Link href="/dashboard/my-resumes">See all list</Link>
-            </Button>
+            {!isProUser && reports.length > 3 && (
+                <Badge variant="primary" className="bg-amber-100 text-amber-800 border-amber-200">
+                    Pro gets full history
+                </Badge>
+            )}
           </div>
           
-          {resumes.length === 0 ? (
+          {reports.length === 0 ? (
             <Card className="border-dashed border-2 bg-transparent border-gray-200 dark:border-gray-800 rounded-2xl">
               <CardBody>
                 <div className="py-12 text-center">
                   <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-10 h-10 text-gray-300" />
+                    <BarChart3 className="w-10 h-10 text-gray-300" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No resumes found</h3>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-6">You haven't uploaded any resumes yet. Start by adding one!</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No analyses found</h3>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-6">Run your first resume analysis via the AI Wizard!</p>
                   <Button asChild>
-                    <Link href="/dashboard/upload-resume">Upload first resume</Link>
+                    <Link href="/wizard">Start AI Wizard</Link>
                   </Button>
                 </div>
               </CardBody>
             </Card>
           ) : (
             <div className="grid gap-4">
-              {resumes.slice(0, 5).map((resume) => (
-                <Card key={resume.id} className="group hover:ring-1 hover:ring-primary/20 hover:shadow-lg transition-all border-none bg-white dark:bg-[#0b0f1a] shadow-sm rounded-2xl">
+              {(isProUser ? reports : reports.slice(0, 3)).map((report) => (
+                <Card key={report.id} className="group hover:ring-1 hover:ring-primary/20 hover:shadow-lg transition-all border-none bg-white dark:bg-[#0b0f1a] shadow-sm rounded-2xl">
                   <CardBody className="p-4">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors flex-shrink-0">
-                          <FileText className="w-6 h-6" />
+                          <BarChart3 className="w-6 h-6" />
                         </div>
-                        <div className="min-w-0 truncate">
-                          <h3 className="font-bold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">{resume.file_name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                               Added {new Date(resume.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                              <h3 className="font-bold text-gray-900 dark:text-white truncate">Analysis Run</h3>
+                              <Badge variant="secondary" className="bg-[#533AB7]/10 text-[#533AB7] dark:bg-[#533AB7]/20 border-none">
+                                  {report.mode === 'MBA_POLISH' ? 'MBA Polish' : 'JD Alignment'}
+                              </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2">
+                             <p className="text-xs text-gray-500 font-medium">ATS: <span className="text-gray-900 dark:text-white">{report.ats_score}</span></p>
+                             <p className="text-xs text-gray-500 font-medium">Match: <span className="text-blue-500">{report.match_score || 0}%</span></p>
+                             <p className="text-xs text-gray-400">
+                               {new Date(report.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                              </p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex-shrink-0">
-                        <Button size="sm" variant="primary" asChild className="rounded-xl shadow-none font-medium">
-                          <Link href={`/dashboard/reports/${resume.id}`}>View Score</Link>
+                      <div className="flex-shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                        <Button size="sm" variant="primary" asChild className="rounded-xl shadow-none font-medium w-full md:w-auto">
+                          <Link href={`/dashboard/reports/${report.resume_id}`}>View Results</Link>
                         </Button>
                       </div>
                     </div>
                   </CardBody>
                 </Card>
               ))}
+              {!isProUser && reports.length > 3 && (
+                 <div className="text-center mt-4">
+                     <p className="text-sm text-gray-500 mb-2">You have {reports.length - 3} older reports hidden.</p>
+                     <Button variant="outline" asChild><Link href="/dashboard/profile">Upgrade to Pro to view all</Link></Button>
+                 </div>
+              )}
             </div>
           )}
         </div>

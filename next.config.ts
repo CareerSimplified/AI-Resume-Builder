@@ -25,9 +25,6 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  experimental: {
-    optimizePackageImports: ['lucide-react', 'clsx'],
-  },
 };
 
 export default nextConfig;

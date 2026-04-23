@@ -18,6 +18,9 @@ export const Navbar = () => {
               <Link href="/#how-it-works" className="text-gray-700 hover:text-primary">
                 How It Works
               </Link>
+              <Link href="/pricing" className="text-gray-700 hover:text-primary font-semibold">
+                Pricing
+              </Link>
             </div>
           </div>
           <div className="flex gap-3">

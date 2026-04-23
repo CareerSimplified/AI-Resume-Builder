@@ -97,9 +97,12 @@ export default function AdminReportsPage() {
                             {report.match_score}%
                          </div>
                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Match Score</p>
-                         <div className="mt-4 flex gap-1">
-                            <Badge variant="secondary" size="sm">ATS: {report.ats_score}%</Badge>
-                         </div>
+                          <div className="mt-4 flex flex-col gap-2 items-center">
+                             <Badge variant="secondary" size="sm">ATS: {report.ats_score}%</Badge>
+                             <Badge variant={report.mode === 'MBA_POLISH' ? 'primary' : 'success'} size="sm">
+                               {report.mode === 'MBA_POLISH' ? 'MBA Polish' : 'JD Align'}
+                             </Badge>
+                          </div>
                       </div>
 
                       {/* Middle: Info */}

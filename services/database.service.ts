@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { User, JobDescription, Resume, Report } from '@/types'
+import { User, JobDescription, Resume, Report, Plan } from '@/types'
 
 // User Service
 export const userService = {
@@ -282,6 +282,28 @@ export const adminService = {
     return { data, error }
   },
 
+  async getAllJobDescriptions() {
+    if (!supabaseAdmin) {
+      return { data: null, error: new Error('Admin credentials not configured') }
+    }
+    const { data, error } = await supabaseAdmin
+      .from('job_descriptions')
+      .select('*')
+      .order('created_at', { ascending: false })
+    return { data, error }
+  },
+
+  async deleteJobDescription(jdId: string) {
+    if (!supabaseAdmin) {
+      return { error: new Error('Admin credentials not configured') }
+    }
+    const { error } = await supabaseAdmin
+      .from('job_descriptions')
+      .delete()
+      .eq('id', jdId)
+    return { error }
+  },
+
   async deleteResume(resumeId: string) {
     if (!supabaseAdmin) {
       return { error: new Error('Admin credentials not configured') }
@@ -379,4 +401,42 @@ export const adminService = {
       }
     }
   },
+}
+
+export const planService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .order('price_inr', { ascending: true })
+    return { data: (data as Plan[]) || [], error }
+  },
+
+  async create(plan: Omit<Plan, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabaseAdmin) return { data: null, error: new Error('Admin context missing') }
+    const { data, error } = await supabaseAdmin
+      .from('plans')
+      .insert(plan)
+      .select()
+      .single()
+    return { data, error }
+  },
+
+  async update(id: string, updates: Partial<Plan>) {
+    if (!supabaseAdmin) return { error: new Error('Admin context missing') }
+    const { error } = await supabaseAdmin
+      .from('plans')
+      .update(updates)
+      .eq('id', id)
+    return { error }
+  },
+
+  async delete(id: string) {
+    if (!supabaseAdmin) return { error: new Error('Admin context missing') }
+    const { error } = await supabaseAdmin
+      .from('plans')
+      .delete()
+      .eq('id', id)
+    return { error }
+  }
 }

@@ -17,9 +17,9 @@ export function Hero() {
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-            Analyze Your Resume with{' '}
+            Your ISB / IIM Resume, Built by{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700">
-              AI
+              AI in 60 Seconds
             </span>
           </h1>
 
@@ -33,10 +33,10 @@ export function Hero() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button
               size="lg"
-              href="/dashboard/upload-resume"
-              leftIcon={<Upload className="w-5 h-5" />}
+              href="/wizard"
+              leftIcon={<Sparkles className="w-5 h-5" />}
             >
-              Upload Resume
+              Start AI Wizard
             </Button>
             <Button
               size="lg"

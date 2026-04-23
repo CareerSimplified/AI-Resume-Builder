@@ -20,12 +20,33 @@ async function getServerSupabase() {
   })
 }
 
+async function getAuthenticatedUserId() {
+  const supabase = await getServerSupabase()
+  if (!supabase) return { userId: null as string | null, error: 'Auth client not configured' }
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return { userId: null as string | null, error: 'Unauthorized' }
+  return { userId: user.id, email: user.email || '', name: user.user_metadata?.name || '', error: null as string | null }
+}
+
+async function ensureUserRow(userId: string, email = '', name = '') {
+  if (!supabaseAdmin) return
+  await supabaseAdmin
+    .from('users')
+    .upsert({
+      id: userId,
+      email: email || `user-${userId}@unknown.local`,
+      name: name || '',
+      role: 'user',
+    })
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get('userId')
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'User ID required' }, { status: 400 })
+    const auth = await getAuthenticatedUserId()
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Unauthorized' }, { status: 401 })
     }
+    const userId = auth.userId
 
     const supabase = await getServerSupabase()
     
@@ -70,9 +91,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { user_id, title, company, skills, experience, description } = body
+    const { title, company, skills, experience, description } = body
 
-    if (!user_id || !title || !description) {
+    const auth = await getAuthenticatedUserId()
+    if (auth.error || !auth.userId) {
+      return NextResponse.json({ success: false, error: auth.error || 'Unauthorized' }, { status: 401 })
+    }
+    const userId = auth.userId
+
+    if (!title || !description) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -81,10 +108,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Admin client not configured' }, { status: 500 })
     }
 
+    await ensureUserRow(userId, auth.email, auth.name)
+
     const { data, error } = await supabaseAdmin
       .from('job_descriptions')
       .insert({
-        user_id,
+        user_id: userId,
         title,
         company,
         skills,
