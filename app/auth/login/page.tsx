@@ -79,7 +79,9 @@ export default function LoginPage() {
 
       toast.success('Logged in successfully')
       
-      window.location.href = '/dashboard'
+      const searchParams = new URLSearchParams(window.location.search)
+      const redirectTo = searchParams.get('redirect') || '/dashboard'
+      window.location.href = redirectTo
     } catch (err: any) {
       console.error('Login error:', err)
       toast.error(err.message || 'An error occurred during login')

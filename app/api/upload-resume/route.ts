@@ -3,6 +3,9 @@ import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+// Use JS helper
+const { extractTextFromPDF } = require('@/lib/pdf-helper');
+
 if (typeof global.DOMMatrix === 'undefined') {
   // @ts-ignore
   global.DOMMatrix = class DOMMatrix {
@@ -28,16 +31,17 @@ async function getServerSupabase() {
   })
 }
 
-async function extractTextFromBuffer(buffer: any) {
-  const { getDocumentProxy, extractText } = await import('unpdf')
-  
-  // Ensure pure Uint8Array
-  const binaryData = new Uint8Array(buffer instanceof ArrayBuffer ? buffer : buffer.buffer || buffer)
-  
-  const pdf = await getDocumentProxy(binaryData)
-  const { text } = await extractText(pdf)
-  const finalText = Array.isArray(text) ? text.join(' ') : text
-  return finalText.trim()
+async function extractTextFromBuffer(buffer: Buffer) {
+  try {
+    const result = await extractTextFromPDF(buffer);
+    return result.text;
+  } catch (err: any) {
+    console.error('[API/upload-resume] extraction error:', err.message)
+    // Fallback: If pdfjs fails, try a very simple string search
+    const text = buffer.toString('utf8').replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+    if (text.length > 100) return text.substring(0, 5000);
+    throw new Error(`Failed to parse PDF: ${err.message}`)
+  }
 }
 
 
@@ -60,7 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
     }
 
-    // FALLBACK: If extraction missing, do it here with UNPDF
+    // FALLBACK: If extraction missing, do it here
     if (!extractedText || extractedText === 'undefined' || extractedText.length < 10) {
       try {
         if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {

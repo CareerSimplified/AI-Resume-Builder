@@ -183,7 +183,7 @@ ${report.suggestions && report.suggestions.length > 0 ? report.suggestions.map((
 
                   <div className="flex items-center gap-3 mt-8 pt-6 border-t border-gray-50 dark:border-gray-800">
                     <Button variant="primary" fullWidth asChild className="rounded-xl shadow-lg shadow-blue-500/20">
-                      <Link href={`/dashboard/reports/${report.resume_id}`}>
+                      <Link href={`/dashboard/reports/${report.id}`}>
                         <Eye className="w-4 h-4 mr-2" /> Analysis
                       </Link>
                     </Button>

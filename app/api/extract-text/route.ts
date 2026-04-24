@@ -1,34 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import mammoth from 'mammoth'
-import { getDocumentProxy, extractText } from 'unpdf'
+
+// Use the JS helper to avoid 'canvas' resolution issues in Turbopack
+const { extractTextFromPDF } = require('@/lib/pdf-helper');
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-async function extractTextFromPDF(buffer: Buffer) {
-  try {
-    // Some pdf.js paths used by unpdf rely on Promise.try in certain builds.
-    if (!(Promise as any).try) {
-      (Promise as any).try = (fn: () => any) => new Promise((resolve, reject) => {
-        try {
-          resolve(fn())
-        } catch (error) {
-          reject(error)
-        }
-      })
-    }
-
-    const pdf = await getDocumentProxy(new Uint8Array(buffer))
-    const textResult = await extractText(pdf, { mergePages: true })
-    return {
-      text: (textResult.text || '').trim(),
-      pages: textResult.totalPages || 1
-    }
-  } catch (err: any) {
-    console.error('[API/extract-text] unpdf error:', err.message)
-    throw new Error(`Failed to parse PDF: ${err.message}`)
-  }
-}
 
 async function extractTextFromDOCX(buffer: Buffer) {
   try {
@@ -50,6 +27,7 @@ export async function POST(req: NextRequest) {
       const formData = await req.formData()
       file = formData.get('file') as File
     } catch (parseError) {
+      // Fallback for direct binary uploads
       const blob = await req.blob()
       if (blob && blob.size > 0) {
         const arrayBuffer = await blob.arrayBuffer()
@@ -66,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided.' }, { status: 400 })
     }
 
-    console.log('[API/extract-text] Extracting PDF text:', file.name)
+    console.log('[API/extract-text] Processing file:', file.name)
 
     if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       const text = await file.text()

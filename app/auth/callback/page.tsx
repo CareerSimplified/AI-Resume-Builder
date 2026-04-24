@@ -28,17 +28,21 @@ export default function CallbackPage() {
           })
 
           const result = await response.json()
+          const searchParams = new URLSearchParams(window.location.search)
+          const redirectTo = searchParams.get('redirect')
 
           if (result.success && result.data) {
             const userRole = result.data.role || role
-            // Redirect based on user role
-            if (userRole === 'admin') {
+            // Redirect based on user role or redirect parameter
+            if (redirectTo) {
+               window.location.href = redirectTo
+            } else if (userRole === 'admin') {
               window.location.href = '/admin'
             } else {
               window.location.href = '/dashboard'
             }
           } else {
-            window.location.href = '/dashboard'
+            window.location.href = redirectTo || '/dashboard'
           }
         } else {
           window.location.href = '/auth/login'

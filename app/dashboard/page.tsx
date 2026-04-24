@@ -239,7 +239,7 @@ export default function DashboardPage() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No analyses found</h3>
                   <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto mb-6">Run your first resume analysis via the AI Wizard!</p>
                   <Button asChild>
-                    <Link href="/wizard">Start AI Wizard</Link>
+                    <Link href="/dashboard/wizard">Start AI Wizard</Link>
                   </Button>
                 </div>
               </CardBody>

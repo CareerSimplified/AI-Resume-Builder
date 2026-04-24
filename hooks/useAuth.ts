@@ -21,7 +21,10 @@ export const useRequireAuth = () => {
 
   useEffect(() => {
     if (!mounted || loading) return
-    if (!user) router.push('/auth/login')
+    if (!user) {
+      const currentPath = window.location.pathname + window.location.search
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`)
+    }
   }, [user, loading, mounted, router])
 
   return { user, loading, mounted, logout }

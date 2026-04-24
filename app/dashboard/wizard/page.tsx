@@ -58,7 +58,7 @@ export default function WizardPage() {
         if (mounted && !authLoading && user) {
             checkUserStatus(user.id)
         } else if (mounted && !authLoading && !user) {
-            router.push('/auth/login')
+            router.push('/auth/login?redirect=/dashboard/wizard')
         }
     }, [user, authLoading, mounted, router])
 

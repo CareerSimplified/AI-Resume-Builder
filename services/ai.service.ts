@@ -17,20 +17,22 @@ Hard requirements for rewrittenResume:
 - Preserve all factual user information from the original resume (names, employers, titles, dates, degrees, certifications, locations, technologies, achievements).
 - Do not invent or fabricate new employers, achievements, awards, education, metrics, or dates.
 - Use ATS-friendly plain text only (no tables, no icons, no emojis, no markdown bullets).
-- Use this exact section ordering where available:
-  SUMMARY
-  EXPERIENCE
-  EDUCATION
-  LEADERSHIP
-  PROJECTS
-  CERTIFICATIONS
-  SKILLS
-  ADDITIONAL INFORMATION
-- Use strong action verbs and concise MBA-style bullets.
-- Every bullet should follow impact-first structure:
-  [Action Verb] + [What you did] + [How/Scope] + [Measurable outcome when available].
-- Keep bullets one line where possible and avoid filler adjectives.
-- If a metric is not present in source text, improve clarity but do not fabricate numbers.
+- Use this exact section ordering:
+  1. NAME & CONTACT (Centered, Bold)
+  2. PROFESSIONAL SUMMARY
+  3. PROFESSIONAL EXPERIENCE (Company, Role, Dates, Location)
+  4. EDUCATION
+  5. LEADERSHIP & ACTIVITIES
+  6. PROJECTS
+  7. SKILLS & CERTIFICATIONS
+  8. ADDITIONAL INFORMATION
+- Use strong action verbs (e.g., Spearheaded, Orchestrated, Optimized, Engineered) and concise MBA-style bullets.
+- Every bullet should follow the XYZ structure or Impact-First structure:
+  [Accomplished X] as measured by [Y], by doing [Z].
+- OR: [Action Verb] + [What you did] + [How/Scope] + [Measurable outcome when available].
+- Keep bullets to one line where possible.
+- If a metric is not present in source text, add a placeholder like [QUANTIFY: e.g. % increase in efficiency] to prompt the user to fill it in.
+- Use horizontal lines (---) or Uppercase Headings to clearly separate sections.
 `;
 
 function parseJSON(text: string) {
@@ -189,31 +191,41 @@ async function callAI(systemPrompt: string, userPrompt: string, useJsonFormat = 
     const generationConfig = useJsonFormat ? { response_mime_type: "application/json" } : {};
     const candidateModels = [
       "gemini-2.0-flash",
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-flash",
+      "gemini-2.5-flash",
+      "gemini-flash-latest",
+      "gemini-pro-latest",
     ];
     let lastError = "Gemini request failed";
 
     for (const model of candidateModels) {
-      const response = await fetchWithTimeout(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-            generationConfig
-          }),
+      for (const apiVersion of ["v1beta", "v1"]) {
+        try {
+          const response = await fetchWithTimeout(
+            `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${geminiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                generationConfig
+              }),
+            }
+          ).then(res => res.json());
+
+          if (response.error) {
+            lastError = response.error.message || "Gemini error";
+            console.warn(`[aiService] Gemini ${apiVersion}/${model} failed: ${lastError}`);
+            continue;
+          }
+
+          if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+            return response.candidates[0].content.parts[0].text;
+          }
+        } catch (e: any) {
+          lastError = e.message;
+          continue;
         }
-      ).then(res => res.json());
-
-      if (response.error) {
-        lastError = response.error.message || "Gemini error";
-        console.warn(`[aiService] Gemini model ${model} failed: ${lastError}`);
-        continue;
       }
-
-      return response.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
 
     throw new Error(lastError);
@@ -247,7 +259,7 @@ ${resumeText}
 
 Return exactly this JSON structure with real data populated:
 {
-  "match_score": { "score": 85, "alignment": 0, "quantification": 25, "keywords": 15, "structure": 15 },
+  "match_score": { "score": 85, "alignment": 0, "quantification": 25, "keywords": 15, "structure": 15, "formatting": 15, "impact": 15 },
   "ats_score": 88,
   "strengths": ["Strong use of action verbs", "Clear chronological structure"],
   "weaknesses": ["Lack of specific metrics in recent roles"],
@@ -256,9 +268,9 @@ Return exactly this JSON structure with real data populated:
   "qualityVerdict": {
     "rating": "moderate",
     "issues": ["Bullets are task-heavy and impact-light"],
-    "improvementsMade": ["Reframed bullets with action + outcome structure"]
+    "improvementsMade": ["Reframed bullets with action + outcome structure", "Standardized section headers", "Applied impact-first narration"]
   },
-  "rewrittenResume": "A full version of the resume rewritten in professional consulting style..."
+  "rewrittenResume": "A full, professional version of the resume rewritten in executive consulting style with clear sections and improved bullet points..."
 }`;
 
         const rawResponse = await callAI(systemPrompt, userPrompt);

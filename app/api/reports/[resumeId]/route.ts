@@ -22,13 +22,29 @@ export async function GET(
       )
     }
 
-    const { data, error } = await supabaseAdmin
+    // First try fetching by report ID
+    let { data, error } = await supabaseAdmin
       .from('reports')
       .select('*')
-      .eq('resume_id', resumeId)
+      .eq('id', resumeId)
       .single()
 
-    if (error) {
+    // If not found by ID, try fetching by resume_id (latest one)
+    if (error || !data) {
+      console.log(`[API/reports] Not found by ID ${resumeId}, trying resume_id...`)
+      const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+        .from('reports')
+        .select('*')
+        .eq('resume_id', resumeId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      
+      data = fallbackData
+      error = fallbackError
+    }
+
+    if (error && !data) {
       console.error('Report fetch error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
