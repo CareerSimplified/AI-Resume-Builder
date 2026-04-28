@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         suggestions: analysis.suggestions,
         gaps: analysis.gaps,
         rewritten_resume: analysis.rewrittenResume,
+        rewritten_resume_data: analysis.rewrittenResumeData,
         cover_letter: analysis.coverLetter,
         interview_prep: analysis.interviewPrep,
         plan_306090: analysis.plan306090,

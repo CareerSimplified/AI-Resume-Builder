@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { FileText, Plus, BarChart3, Settings, Home, AlertCircle, RefreshCw } from 'lucide-react'
+import { FileText, Plus, BarChart3, Settings, Home, AlertCircle, RefreshCw, Target, Upload } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardHeader, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
@@ -188,12 +188,11 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Link href="/dashboard/create-jd" className="group">
+          <Link href="/dashboard/wizard" className="group">
             <div className="flex items-center gap-4 p-6 bg-white dark:bg-[#0b0f1a] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/30 dark:hover:border-primary/20 transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                <Plus className="w-6 h-6" />
+                <Target className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Create Job Description</h3>
@@ -202,10 +201,10 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          <Link href="/dashboard/upload-resume" className="group">
+          <Link href="/dashboard/wizard" className="group">
              <div className="flex items-center gap-4 p-6 bg-white dark:bg-[#0b0f1a] border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/30 dark:hover:border-primary/20 transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                <FileText className="w-6 h-6" />
+                <Upload className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Upload New Resume</h3>
@@ -272,7 +271,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-shrink-0 w-full md:w-auto mt-4 md:mt-0">
                         <Button size="sm" variant="primary" asChild className="rounded-xl shadow-none font-medium w-full md:w-auto">
-                          <Link href={`/dashboard/reports/${report.resume_id}`}>View Results</Link>
+                          <Link href={`/dashboard/reports/${report.id}`}>View Results</Link>
                         </Button>
                       </div>
                     </div>

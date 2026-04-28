@@ -23,34 +23,61 @@ export const ResumePreview = forwardRef<ResumePreviewHandle, ResumePreviewProps>
     success('Resume copied to clipboard!');
   };
 
-  const downloadPdf = async () => {
-    if (!resumeRef.current) return;
+const downloadPdf = async () => {
+    if (!resumeRef.current) {
+      error("Resume preview element not found");
+      return;
+    }
     
     try {
       const element = resumeRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
+      
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.backgroundColor = '#ffffff';
+      
+      const allEls = clone.querySelectorAll('*');
+      allEls.forEach(el => {
+        const style = (el as HTMLElement).style;
+        style.backgroundColor = '';
+        style.color = '';
+        style.borderColor = '';
       });
       
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, (pdfHeight - 20) / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10;
+      document.body.appendChild(clone);
       
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      pdf.save(`Optimized_Resume_${new Date().getTime()}.pdf`);
+      const canvasFunc = html2canvas;
+      if (!canvasFunc) {
+        throw new Error('html2canvas not loaded');
+      }
+      
+      const canvasResult = await canvasFunc(clone as HTMLElement, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+      
+      document.body.removeChild(clone);
+      
+      const imgData = canvasResult.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pw = pdf.internal.pageSize.getWidth();
+      const ph = pdf.internal.pageSize.getHeight();
+      
+      const ratio = Math.min((pw - 10) / canvasResult.width, (ph - 20) / canvasResult.height);
+      const fw = canvasResult.width * ratio;
+      const fh = canvasResult.height * ratio;
+      
+      if (fh > ph) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 5, 10, fw, fh);
+      pdf.save(`Optimized_Resume_${Date.now()}.pdf`);
       success('PDF downloaded successfully!');
-    } catch (err) {
+    } catch (err: any) {
       console.error('PDF generation error:', err);
-      error('Failed to generate PDF');
+      error(err?.message || 'Failed to generate PDF');
     }
   };
 

@@ -136,12 +136,12 @@ export const jobDescriptionService = {
 
 // Resume Service
 export const resumeService = {
-  async create(userId: string, jdId: string, fileUrl: string, extractedText: string, fileName: string) {
+  async create(userId: string, jdId: string | null, fileUrl: string, extractedText: string, fileName: string) {
     const { data, error } = await supabase
       .from('resumes')
       .insert({
         user_id: userId,
-        jd_id: jdId,
+        jd_id: jdId || null,
         file_url: fileUrl,
         extracted_text: extractedText,
         file_name: fileName,

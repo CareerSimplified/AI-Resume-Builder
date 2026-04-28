@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Check, Sparkles, Zap, ShieldCheck } from 'lucide-react'
-import { Navbar } from '@/components/Navbar'
+import { Navbar } from '@/components/landing'
 import { Button } from '@/components/ui'
 import { Card, CardBody } from '@/components/Card'
 import { planService } from '@/services/database.service'

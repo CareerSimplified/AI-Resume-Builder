@@ -1,9 +1,9 @@
-import React from 'react'
-import { Edit3, Target, Search, FileSearch, MessageSquare, Copy, Zap, GraduationCap, Sparkles } from 'lucide-react'
+import { Edit3, Target, Search, FileSearch, MessageSquare, Copy, Zap, GraduationCap, Sparkles, Download } from 'lucide-react'
 import { Card, CardBody } from '@/components/Card'
 import { Badge, Button } from '@/components/ui'
 import { clsx } from 'clsx'
 import { useRouter } from 'next/navigation'
+import { ResumePreview, ResumePreviewHandle } from './ResumePreview'
 
 interface ResultsDashboardProps {
   analysisResult: any
@@ -12,6 +12,9 @@ interface ResultsDashboardProps {
   activeResultTab: string
   setActiveResultTab: (tab: string) => void
   onStartOver: () => void
+  resumePreviewRef?: React.RefObject<ResumePreviewHandle | null>
+  onDownloadPdf?: () => void
+  onDownloadDocx?: () => void
 }
 
 export function ResultsDashboard({
@@ -20,7 +23,10 @@ export function ResultsDashboard({
   jdData,
   activeResultTab,
   setActiveResultTab,
-  onStartOver
+  onStartOver,
+  resumePreviewRef,
+  onDownloadPdf,
+  onDownloadDocx
 }: ResultsDashboardProps) {
   const router = useRouter()
   
@@ -31,21 +37,21 @@ export function ResultsDashboard({
       <div className="flex flex-col md:flex-row items-center justify-between gap-6">
          <div>
             <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-              {mode === 'JD_ALIGNMENT' ? `${jdData.company} ${jdData.role}` : 'MBA Master Resume'}
+              {mode === 'JD_ALIGNMENT' ? `${jdData?.company} ${jdData?.role}` : 'MBA Master Resume'}
             </h1>
          </div>
          <div className="flex gap-2">
-           <Button variant="secondary" onClick={onStartOver} className="rounded-xl h-11 px-6 font-black scale-90">← Start over</Button>
+            <Button variant="secondary" onClick={onStartOver} className="rounded-xl h-11 px-6 font-black scale-90">← Start over</Button>
          </div>
       </div>
 
       <div className="flex gap-4 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-x-auto scroller-hidden">
          {[
-           { id: 'resume', label: 'Tweaked resume', icon: Edit3, free: true },
-           { id: 'score', label: 'Match score', icon: Target, free: true },
-           { id: 'gaps', label: 'Keywords', icon: Search, free: false },
-           { id: 'cover', label: 'Cover letter', icon: FileSearch, free: false },
-           { id: 'prep', label: 'Interview prep', icon: MessageSquare, free: false },
+           { id: 'resume', label: 'AI-Improved Resume', icon: Edit3 },
+           { id: 'score', label: 'Match score', icon: Target },
+           { id: 'gaps', label: 'Keywords & Gaps', icon: Search },
+           { id: 'cover', label: 'Cover letter', icon: FileSearch },
+           { id: 'prep', label: 'Interview prep', icon: MessageSquare },
          ].map(tab => (
            <button
             key={tab.id}
@@ -55,7 +61,7 @@ export function ResultsDashboard({
               activeResultTab === tab.id ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-sm" : "text-slate-500 hover:bg-white/50"
             )}
            >
-             {!tab.free && <Badge variant="primary" className="text-[8px] scale-75 -ml-2">Pro</Badge>} <tab.label />
+             {tab.label}
            </button>
          ))}
       </div>
@@ -63,26 +69,29 @@ export function ResultsDashboard({
       <div className="min-h-[500px]">
          {activeResultTab === 'resume' && (
            <div className="grid lg:grid-cols-3 gap-8">
-              <Card className="lg:col-span-2 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden">
+              <Card className="lg:col-span-2 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden h-[900px]">
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 border-b dark:border-slate-800 flex items-center justify-between">
-                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">JD-aligned resume · plain text</h3>
+                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">AI-Optimized Professional Preview</h3>
                       <div className="flex gap-2">
-                          <button className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500" title="Copy"><Copy className="w-4 h-4" /></button>
-                          <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-indigo-600/20">↓ DOCX</button>
+                          <button onClick={() => {
+                            if (analysisResult.rewrittenResume) {
+                                navigator.clipboard.writeText(analysisResult.rewrittenResume);
+                            }
+                          }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500" title="Copy Raw Text"><Copy className="w-4 h-4" /></button>
+                          <button onClick={onDownloadPdf} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-indigo-600/20"><Download className="w-4 h-4" /> PDF</button>
+                          <button onClick={onDownloadDocx} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-slate-800/20">↓ DOCX</button>
                       </div>
                   </div>
-                  <CardBody className="p-10">
-                      <div className="font-serif text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap max-h-[800px] overflow-y-auto">
-                         {analysisResult.rewrittenResume}
-                      </div>
+                  <CardBody className="p-0 h-[calc(100%-80px)]">
+                      <ResumePreview 
+                        ref={resumePreviewRef}
+                        data={analysisResult.rewrittenResumeData}
+                        rawText={analysisResult.rewrittenResume}
+                      />
                   </CardBody>
               </Card>
 
               <div className="space-y-6">
-                  <Card className="bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none rounded-3xl p-8 text-center">
-                      <h4 className="text-xs font-black uppercase tracking-widest opacity-80 mb-6">Unlock keywords, cover letter & interview prep guide</h4>
-                      <Button fullWidth variant="secondary" onClick={() => router.push('/dashboard/profile')} className="bg-white text-indigo-600 h-14 rounded-2xl font-black shadow-xl border-none">Upgrade to Pro →</Button>
-                  </Card>
 
                   <div className="p-8 border-2 border-indigo-100 dark:border-indigo-900/50 rounded-3xl bg-indigo-50/20 dark:bg-indigo-900/10">
                      <h4 className="font-black text-slate-900 dark:text-white flex items-center gap-2 mb-4 text-sm">
@@ -134,25 +143,83 @@ export function ResultsDashboard({
            </div>
          )}
          
-         {(activeResultTab === 'gaps' || activeResultTab === 'cover' || activeResultTab === 'prep') && (
-            <Card className="border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl p-16 flex flex-col items-center text-center">
-               <div className="w-24 h-24 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-8">
-                  <Sparkles className="w-12 h-12 text-indigo-600" />
+         {activeResultTab === 'gaps' && (
+            <div className="grid md:grid-cols-2 gap-8">
+               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
+                  <h3 className="text-xl font-black mb-4">Strengths</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-300">
+                     {analysisResult.strengths?.map((s: string, i: number) => <li key={i} className="flex items-start gap-2"><Sparkles className="w-4 h-4 text-emerald-500 mt-1 flex-shrink-0"/><span>{s}</span></li>) || <li>No strengths listed.</li>}
+                  </ul>
+               </Card>
+               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
+                  <h3 className="text-xl font-black mb-4 text-red-500">Weaknesses</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-300">
+                     {analysisResult.weaknesses?.map((s: string, i: number) => <li key={i} className="flex items-start gap-2"><Target className="w-4 h-4 text-red-400 mt-1 flex-shrink-0"/><span>{s}</span></li>) || <li>No weaknesses listed.</li>}
+                  </ul>
+               </Card>
+               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl col-span-1 md:col-span-2">
+                  <h3 className="text-xl font-black mb-4 text-indigo-500">Missing Skills & Keywords</h3>
+                  <div className="flex flex-wrap gap-2">
+                     {analysisResult.missing_skills?.map((s: string, i: number) => <Badge key={i} variant="secondary" className="bg-slate-100 dark:bg-slate-800 border-none px-3 py-1">{s}</Badge>) || <span>None detected.</span>}
+                     {analysisResult.gaps?.missing_keywords?.map((s: string, i: number) => <Badge key={`k-${i}`} variant="secondary" className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-none px-3 py-1">{s}</Badge>)}
+                  </div>
+               </Card>
+            </div>
+         )}
+
+         {activeResultTab === 'cover' && (
+            <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl font-sans text-slate-700 dark:text-slate-300 leading-relaxed max-w-4xl mx-auto">
+               <div className="flex justify-end mb-4">
+                  <button onClick={() => navigator.clipboard.writeText(analysisResult.coverLetter || '')} className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 font-bold bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-lg transition-colors"><Copy className="w-4 h-4"/> Copy Letter</button>
                </div>
-               <h3 className="text-2xl font-black mb-4 uppercase tracking-[0.2em] text-slate-400">Unlock Pro Insights</h3>
-               <p className="max-w-md text-slate-500 dark:text-slate-400 mb-10 font-bold">
-                  Upgrade to Pro to access high-precision keyword analysis, custom generated cover letters, and intensive interview preparation guides.
-               </p>
-               <Button size="lg" variant="primary" onClick={() => router.push('/dashboard/profile')} className="px-12 h-16 bg-indigo-600 text-white rounded-2xl font-black text-xl shadow-2xl shadow-indigo-600/30">
-                 Upgrade to Pro →
-               </Button>
+               <div className="whitespace-pre-wrap">
+                  {analysisResult.coverLetter || "No cover letter generated."}
+               </div>
+            </Card>
+         )}
+
+         {activeResultTab === 'prep' && (
+            <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl font-sans max-w-4xl mx-auto">
+               <div className="flex items-center gap-3 mb-8 pb-4 border-b dark:border-slate-800">
+                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl flex items-center justify-center">
+                     <MessageSquare className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                     <h3 className="text-2xl font-black">Interview Preparation</h3>
+                     <p className="text-slate-500 text-sm">15 AI-generated Q&A based on your resume and JD</p>
+                  </div>
+               </div>
+               <div className="space-y-6">
+                  {(() => {
+                    let questions: any[] = [];
+                    try { questions = JSON.parse(analysisResult.interviewPrep || '[]'); } catch { questions = []; }
+                    if (Array.isArray(questions) && questions.length > 0) {
+                      return questions.map((q: any, i: number) => (
+                        <div key={i} className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                          <div className="flex items-start gap-3 mb-3">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 font-black text-sm flex items-center justify-center">Q{q.id || i+1}</span>
+                            <div className="flex-1">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-1 block">{q.type || 'general'}</span>
+                              <p className="font-bold text-slate-900 dark:text-white leading-snug">{q.question}</p>
+                            </div>
+                          </div>
+                          <div className="ml-11 p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{q.answer}</p>
+                          </div>
+                        </div>
+                      ));
+                    }
+                    // Fallback: render as plain text
+                    return <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300">{analysisResult.interviewPrep || "No interview prep generated. Please run analysis again."}</div>;
+                  })()}
+               </div>
             </Card>
          )}
       </div>
 
        <div className="flex justify-center gap-6 pt-12 border-t dark:border-slate-800">
-         <button className="text-slate-400 font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:text-indigo-600 transition-all"><Copy className="w-4 h-4" /> Copy plain text</button>
-         <button className="text-slate-400 font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:text-indigo-600 transition-all text-indigo-600">↓ Download DOCX</button>
+         <button onClick={() => navigator.clipboard.writeText(analysisResult.rewrittenResume || '')} className="text-slate-400 font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:text-indigo-600 transition-all"><Copy className="w-4 h-4" /> Copy plain text</button>
+         <button onClick={onDownloadDocx} className="text-indigo-600 font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:text-indigo-700 transition-all">↓ Download DOCX</button>
       </div>
 
     </div>

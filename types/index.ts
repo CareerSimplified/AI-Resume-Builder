@@ -63,6 +63,7 @@ export interface ReportAnalysis {
   gaps?: Gaps
   qualityVerdict?: QualityVerdict
   rewrittenResume?: string
+  rewrittenResumeData?: any
   coverLetter?: string
   interviewPrep?: string
   plan306090?: string
@@ -82,6 +83,7 @@ export interface Report {
   suggestions: string[]
   gaps?: Gaps
   rewritten_resume?: string
+  rewritten_resume_data?: any
   cover_letter?: string
   interview_prep?: string
   plan_306090?: string

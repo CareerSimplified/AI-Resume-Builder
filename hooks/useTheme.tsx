@@ -19,22 +19,21 @@ const ThemeContext = createContext<ThemeContextType>({
 })
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
+  const [theme, setThemeState] = useState<Theme>('light')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Apply dark theme immediately to prevent flash
-    applyTheme('dark')
+    // Apply light theme immediately to prevent flash
+    applyTheme('light')
     setMounted(true)
     try {
       const saved = localStorage.getItem('theme') as Theme | null
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      const initial = saved || (systemDark ? 'dark' : 'light')
+      const initial = saved || 'light'
       setThemeState(initial)
       applyTheme(initial)
     } catch (e) {
       console.error('Failed to load theme from localStorage', e)
-      applyTheme('dark')
+      applyTheme('light')
     }
   }, [])
 

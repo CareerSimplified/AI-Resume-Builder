@@ -123,7 +123,7 @@ ${report.suggestions && report.suggestions.length > 0 ? report.suggestions.map((
                 Refresh
              </Button>
              <Button asChild>
-                <Link href="/dashboard/upload-resume">
+                <Link href="/dashboard/wizard">
                   <Plus className="w-4 h-4 mr-2" /> New Analysis
                 </Link>
              </Button>
@@ -145,7 +145,7 @@ ${report.suggestions && report.suggestions.length > 0 ? report.suggestions.map((
               <h3 className="text-2xl font-bold mb-2">No Reports Found</h3>
               <p className="text-gray-500 mb-8 max-w-xs mx-auto">Upload your first resume to get a detailed breakdown of your skills and matching scores.</p>
               <Button asChild size="lg">
-                <Link href="/dashboard/upload-resume">Upload Now</Link>
+                <Link href="/dashboard/wizard">Upload Now</Link>
               </Button>
             </CardBody>
           </Card>

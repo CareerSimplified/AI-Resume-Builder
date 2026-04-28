@@ -188,7 +188,7 @@ async function callAI(systemPrompt: string, userPrompt: string, useJsonFormat = 
 
   if (geminiKey) {
     console.log("[aiService] Using Gemini API fallback");
-    const generationConfig = useJsonFormat ? { response_mime_type: "application/json" } : {};
+    const generationConfig = useJsonFormat ? { responseMimeType: "application/json" } : {};
     const candidateModels = [
       "gemini-2.0-flash",
       "gemini-2.5-flash",
@@ -206,8 +206,7 @@ async function callAI(systemPrompt: string, userPrompt: string, useJsonFormat = 
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-                generationConfig
+                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }]
               }),
             }
           ).then(res => res.json());
@@ -252,6 +251,7 @@ export const aiService = {
         const userPrompt = `Analyze this resume for MBA-level formatting and polish.
 Focus on: Action verbs, metrics (quantification), STAR structure, and consulting-style language.
 Target standard: ${targetStandard || 'Auto Detect'}
+
 ${RESUME_REWRITE_RULES}
 
 RESUME:
@@ -270,22 +270,56 @@ Return exactly this JSON structure with real data populated:
     "issues": ["Bullets are task-heavy and impact-light"],
     "improvementsMade": ["Reframed bullets with action + outcome structure", "Standardized section headers", "Applied impact-first narration"]
   },
-  "rewrittenResume": "A full, professional version of the resume rewritten in executive consulting style with clear sections and improved bullet points..."
+  "rewrittenResume": "A full, professional version of the resume rewritten in executive consulting style...",
+  "rewrittenResumeData": {
+    "header": { "name": "...", "email": "...", "phone": "...", "location": "...", "links": ["LinkedIn: ...", "Portfolio: ..."] },
+    "summary": "...",
+    "sections": [
+      { 
+        "title": "EXPERIENCE", 
+        "items": [ 
+          { "company": "...", "role": "...", "dates": "...", "location": "...", "bullets": ["Accomplished X..."] } 
+        ] 
+      },
+      { "title": "EDUCATION", "items": [ { "institution": "...", "degree": "...", "dates": "...", "location": "...", "details": "..." } ] },
+      { "title": "PROJECTS", "items": [ { "name": "...", "technologies": "...", "bullets": ["..."] } ] },
+      { "title": "SKILLS", "items": [ { "category": "...", "skills": ["..."] } ] }
+    ]
+  }
 }`;
 
-        const rawResponse = await callAI(systemPrompt, userPrompt);
-        let parsed = parseJSON(rawResponse);
-        if (!parsed) throw new Error("Failed to parse MBA Polish JSON");
+        // Fire all MBA tasks in parallel: resume rewrite + cover letter + interview prep
+        const mbaTasks = [
+          callAI(systemPrompt, userPrompt).then(res => ({ type: 'main', data: parseJSON(res) })),
+          callAI(
+            "You are a professional career coach. Return ONLY valid JSON.",
+            `Write a professional, compelling cover letter for this candidate. The letter should highlight their key strengths, quantified achievements, and career narrative. Make it ready to send.\n\nRESUME:\n${resumeText}\n\nReturn JSON: {"coverLetter": "Dear Hiring Manager,\\n\\n[Full 3-4 paragraph cover letter]\\n\\nSincerely,\\n[Name]"}`
+          ).then(res => ({ type: 'cover', data: parseJSON(res) })),
+          callAI(
+            "You are a senior interview coach. Return ONLY valid JSON.",
+            `Based on this resume, generate exactly 15 likely interview questions with detailed STAR-format answers. Include a mix of behavioral, technical, and situational questions.\n\nRESUME:\n${resumeText}\n\nReturn JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`
+          ).then(res => ({ type: 'interview', data: parseJSON(res) }))
+        ];
+
+        const mbaResults = await Promise.all(mbaTasks);
+        const mainData = mbaResults.find(r => r.type === 'main')?.data;
+        const coverData = mbaResults.find(r => r.type === 'cover')?.data;
+        const interviewData = mbaResults.find(r => r.type === 'interview')?.data;
+
+        if (!mainData) throw new Error("Failed to parse MBA Polish JSON");
 
         return {
-          match_score: parsed.match_score || { score: 85, alignment: 0, quantification: 25, keywords: 15, structure: 15 },
-          ats_score: parsed.ats_score || 85,
-          strengths: parsed.strengths || [],
-          weaknesses: parsed.weaknesses || [],
-          missing_skills: parsed.missing_skills || [],
-          suggestions: parsed.suggestions || [],
-          qualityVerdict: parsed.qualityVerdict,
-          rewrittenResume: normalizeRewrittenResume(parsed.rewrittenResume || ""),
+          match_score: mainData.match_score || { score: 85, alignment: 0, quantification: 25, keywords: 15, structure: 15 },
+          ats_score: mainData.ats_score || 85,
+          strengths: mainData.strengths || [],
+          weaknesses: mainData.weaknesses || [],
+          missing_skills: mainData.missing_skills || [],
+          suggestions: mainData.suggestions || [],
+          qualityVerdict: mainData.qualityVerdict,
+          rewrittenResume: normalizeRewrittenResume(mainData.rewrittenResume || ""),
+          rewrittenResumeData: mainData.rewrittenResumeData,
+          coverLetter: coverData?.coverLetter || "Cover letter generation failed. Please try again.",
+          interviewPrep: interviewData?.questions ? JSON.stringify(interviewData.questions) : "Interview prep generation failed.",
           gaps: { missing_skills: [], missing_frameworks: [], missing_keywords: [], missing_metrics: [], missing_leadership: [] }
         };
       } else {
@@ -302,7 +336,19 @@ RESUME:
 ${resumeText}
 JD:
 ${jobDescription}
-Return JSON: {"rewrittenResume": "Full document with section headings and bullet points..."}`)
+Return JSON: {
+  "rewrittenResume": "Full document text...",
+  "rewrittenResumeData": {
+    "header": { "name": "...", "email": "...", "phone": "...", "location": "...", "links": ["LinkedIn: ..."] },
+    "summary": "...",
+    "sections": [
+      { "title": "EXPERIENCE", "items": [ { "company": "...", "role": "...", "dates": "...", "location": "...", "bullets": ["..."] } ] },
+      { "title": "EDUCATION", "items": [ { "institution": "...", "degree": "...", "dates": "...", "location": "...", "details": "..." } ] },
+      { "title": "PROJECTS", "items": [ { "name": "...", "technologies": "...", "bullets": ["..."] } ] },
+      { "title": "SKILLS", "items": [ { "category": "...", "skills": ["..."] } ] }
+    ]
+  }
+}`)
             .then(res => ({ type: 'rewrite', data: parseJSON(res) }))
         );
 
@@ -327,38 +373,44 @@ Return JSON: {
             .then(res => ({ type: 'score', data: parseJSON(res) }))
         );
 
-        if (isPro) {
-          // 3. Keyword analysis (Pro)
-          tasks.push(
-            callAI(baseSystemPrompt, `Extract strengths, weaknesses, missing skills, and suggestions.
+        // 3. Keyword analysis (All users)
+        tasks.push(
+          callAI(baseSystemPrompt, `Extract specific strengths, weaknesses, missing skills, and actionable suggestions by comparing resume to JD.
 RESUME:
 ${resumeText}
 JD:
 ${jobDescription}
-Return JSON: {"strengths": [], "weaknesses": [], "missing_skills": [], "suggestions": []}`)
-              .then(res => ({ type: 'keywords', data: parseJSON(res) }))
-          );
-          // 4. Cover Letter (Pro)
-          tasks.push(
-            callAI(baseSystemPrompt, `Write a professional cover letter specifically tailored to this JD using the candidate's resume.
+Return JSON: {"strengths": ["specific strength 1"], "weaknesses": ["specific weakness 1"], "missing_skills": ["Skill1", "Skill2"], "suggestions": ["actionable suggestion 1"]}`)
+            .then(res => ({ type: 'keywords', data: parseJSON(res) }))
+        );
+
+        // 4. Cover Letter (All users)
+        tasks.push(
+          callAI(
+            "You are a professional career coach writing cover letters. Return ONLY valid JSON.",
+            `Write a professional, compelling cover letter specifically tailored to this JD using the candidate's resume. 3-4 paragraphs, highlight relevant experience.
 RESUME:
 ${resumeText}
 JD:
 ${jobDescription}
-Return JSON: {"coverLetter": "Dear Hiring Manager..."}`)
-              .then(res => ({ type: 'coverLetter', data: parseJSON(res) }))
-          );
-          // 5. Interview Prep (Pro)
-          tasks.push(
-            callAI(baseSystemPrompt, `Provide the top 5 likely interview questions the hiring manager will ask based on the gaps or key requirements, and suggest STAR answers.
+Return JSON: {"coverLetter": "Dear Hiring Manager,\\n\\n[Full professional cover letter]\\n\\nSincerely,\\n[Candidate Name]"}`
+          ).then(res => ({ type: 'coverLetter', data: parseJSON(res) }))
+        );
+
+        // 5. Interview Prep - 15 Q&A (All users)
+        tasks.push(
+          callAI(
+            "You are a senior interview coach. Return ONLY valid JSON.",
+            `Based on this resume and job description, generate exactly 15 interview questions the hiring manager will most likely ask. For each question, provide a detailed STAR-format answer using the candidate's actual experience. Mix: 5 behavioral, 5 technical, 5 situational.
+
 RESUME:
 ${resumeText}
 JD:
 ${jobDescription}
-Return JSON: {"interviewPrep": "Detailed Q&A..."}`)
-              .then(res => ({ type: 'interview', data: parseJSON(res) }))
-          );
-        }
+
+Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "Tell me about a time...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`
+          ).then(res => ({ type: 'interview', data: parseJSON(res) }))
+        );
 
         const results = await Promise.all(tasks);
 
@@ -371,14 +423,16 @@ Return JSON: {"interviewPrep": "Detailed Q&A..."}`)
           missing_skills: [],
           suggestions: [],
           rewrittenResume: "",
-          coverLetter: isPro ? "Error generating cover letter." : "Unlock Pro to see cover letter.",
-          interviewPrep: isPro ? "Error generating interview prep." : "Unlock Pro to see interview prep.",
+          rewrittenResumeData: null,
+          coverLetter: "Cover letter generation failed. Please try again.",
+          interviewPrep: "Interview prep generation failed. Please try again.",
           gaps: { missing_skills: [], missing_frameworks: [], missing_keywords: [], missing_metrics: [], missing_leadership: [] }
         };
 
         for (const r of results) {
           if (r.type === 'rewrite' && r.data?.rewrittenResume) {
             analysis.rewrittenResume = normalizeRewrittenResume(r.data.rewrittenResume);
+            analysis.rewrittenResumeData = r.data.rewrittenResumeData;
           }
 
           if (r.type === 'score' && r.data) {
@@ -395,7 +449,13 @@ Return JSON: {"interviewPrep": "Detailed Q&A..."}`)
           }
 
           if (r.type === 'coverLetter' && r.data?.coverLetter) analysis.coverLetter = r.data.coverLetter;
-          if (r.type === 'interview' && r.data?.interviewPrep) analysis.interviewPrep = r.data.interviewPrep;
+          if (r.type === 'interview' && r.data) {
+            if (r.data.questions && Array.isArray(r.data.questions)) {
+              analysis.interviewPrep = JSON.stringify(r.data.questions);
+            } else if (r.data.interviewPrep) {
+              analysis.interviewPrep = typeof r.data.interviewPrep === 'string' ? r.data.interviewPrep : JSON.stringify(r.data.interviewPrep);
+            }
+          }
         }
 
         return analysis;
@@ -446,7 +506,8 @@ Return JSON: {"interviewPrep": "Detailed Q&A..."}`)
         missing_metrics: metricHints.length ? metricHints : ["Add at least 2 quantified achievements in recent role"],
         missing_leadership: /\b(lead|mentor|managed|team)\b/i.test(resumeText) ? [] : ["Add one bullet showing ownership/leadership"]
       },
-      rewrittenResume: resumeText // Fallback to original
+      rewrittenResume: resumeText, // Fallback to original
+      rewrittenResumeData: null // ResumePreview handles null
     };
   }
 };
