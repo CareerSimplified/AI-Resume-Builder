@@ -112,20 +112,18 @@ ${report.suggestions && report.suggestions.length > 0 ? report.suggestions.map((
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
       <div className="max-w-6xl mx-auto space-y-8 pb-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Report Analytics</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Unlock insights into your career potential with AI-driven resume auditing.</p>
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Report Analytics</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Unlock insights into your career potential with AI-driven resume auditing.</p>
           </div>
-          <div className="flex gap-3">
-             <Button variant="secondary" onClick={fetchReports} disabled={loading}>
+          <div className="flex gap-3 w-full sm:w-auto">
+             <Button variant="secondary" onClick={fetchReports} disabled={loading} className="flex-1 sm:flex-none">
                 <RefreshCw className={clsx("w-4 h-4 mr-2", loading && "animate-spin")} />
                 Refresh
              </Button>
-             <Button asChild>
-                <Link href="/dashboard/wizard">
-                  <Plus className="w-4 h-4 mr-2" /> New Analysis
-                </Link>
+             <Button href="/dashboard/wizard" leftIcon={<Plus className="w-4 h-4" />} className="flex-1 sm:flex-none">
+                New Analysis
              </Button>
           </div>
         </div>

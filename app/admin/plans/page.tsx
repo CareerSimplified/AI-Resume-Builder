@@ -83,18 +83,18 @@ export default function AdminPlansPage() {
   return (
     <DashboardLayout sidebarItems={adminSidebarItems}>
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
            <h1 className="text-3xl font-black italic tracking-tight">Manage <span className="text-indigo-600">Pricing</span></h1>
-           <Button onClick={handleCreate} className="rounded-xl h-12 px-6 font-black"><Plus className="w-4 h-4 mr-2" /> Add Plan</Button>
+           <Button onClick={handleCreate} className="rounded-xl h-12 px-6 font-black w-full sm:w-auto"><Plus className="w-4 h-4 mr-2" /> Add Plan</Button>
         </div>
 
         <div className="grid gap-6">
            {plans.map(plan => (
              <Card key={plan.id} className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
-                <CardBody className="p-8">
-                   {editingId === plan.id ? (
-                     <div className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
+                 <CardBody className="p-4 sm:p-8">
+                    {editingId === plan.id ? (
+                      <div className="space-y-6">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                            <div>
                               <label className="block text-[10px] font-black uppercase text-slate-400 mb-2">Plan Name</label>
                               <input 
@@ -135,7 +135,7 @@ export default function AdminPlansPage() {
                            </label>
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-4 border-t dark:border-slate-800">
+                        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-3 justify-end pt-4 border-t dark:border-slate-800">
                            <Button variant="secondary" onClick={() => setEditingId(null)} className="rounded-xl h-12 px-6 font-black"><X className="w-4 h-4 mr-2" /> Cancel</Button>
                            <Button onClick={handleSave} className="bg-indigo-600 text-white rounded-xl h-12 px-6 font-black"><Save className="w-4 h-4 mr-2" /> Save Changes</Button>
                         </div>

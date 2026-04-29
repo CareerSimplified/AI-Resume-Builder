@@ -34,33 +34,34 @@ export function ResultsDashboard({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
               {mode === 'JD_ALIGNMENT' ? `${jdData?.company} ${jdData?.role}` : 'MBA Master Resume'}
             </h1>
          </div>
-         <div className="flex gap-2">
-            <Button variant="secondary" onClick={onStartOver} className="rounded-xl h-11 px-6 font-black scale-90">← Start over</Button>
+         <div className="flex gap-2 w-full md:w-auto">
+            <Button variant="secondary" onClick={onStartOver} className="rounded-xl h-11 px-6 font-black scale-90 flex-1 md:flex-none">← Start over</Button>
          </div>
       </div>
 
-      <div className="flex gap-4 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-x-auto scroller-hidden">
+      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-x-auto scrollbar-hide -mx-2 px-2">
          {[
-           { id: 'resume', label: 'AI-Improved Resume', icon: Edit3 },
-           { id: 'score', label: 'Match score', icon: Target },
-           { id: 'gaps', label: 'Keywords & Gaps', icon: Search },
-           { id: 'cover', label: 'Cover letter', icon: FileSearch },
-           { id: 'prep', label: 'Interview prep', icon: MessageSquare },
+           { id: 'resume', label: 'AI Resume', icon: Edit3 },
+           { id: 'score', label: 'Score', icon: Target },
+           { id: 'gaps', label: 'Gaps', icon: Search },
+           { id: 'cover', label: 'Cover', icon: FileSearch },
+           { id: 'prep', label: 'Interview', icon: MessageSquare },
          ].map(tab => (
            <button
             key={tab.id}
             onClick={() => setActiveResultTab(tab.id)}
             className={clsx(
-              "flex items-center gap-2 px-6 py-4 rounded-xl font-black whitespace-nowrap transition-all text-sm",
+              "flex items-center gap-2 px-4 sm:px-6 py-3 sm:py-4 rounded-xl font-black whitespace-nowrap transition-all text-xs sm:text-sm flex-shrink-0",
               activeResultTab === tab.id ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-sm" : "text-slate-500 hover:bg-white/50"
             )}
            >
+             <tab.icon className="w-4 h-4 flex-shrink-0" />
              {tab.label}
            </button>
          ))}
@@ -69,19 +70,19 @@ export function ResultsDashboard({
       <div className="min-h-[500px]">
          {activeResultTab === 'resume' && (
            <div className="grid lg:grid-cols-3 gap-8">
-              <Card className="lg:col-span-2 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden h-[900px]">
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 border-b dark:border-slate-800 flex items-center justify-between">
-                      <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">AI-Optimized Professional Preview</h3>
-                      <div className="flex gap-2">
-                          <button onClick={() => {
-                            if (analysisResult.rewrittenResume) {
-                                navigator.clipboard.writeText(analysisResult.rewrittenResume);
-                            }
-                          }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500" title="Copy Raw Text"><Copy className="w-4 h-4" /></button>
-                          <button onClick={onDownloadPdf} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-indigo-600/20"><Download className="w-4 h-4" /> PDF</button>
-                          <button onClick={onDownloadDocx} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-black shadow-lg shadow-slate-800/20">↓ DOCX</button>
-                      </div>
-                  </div>
+               <Card className="lg:col-span-2 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl overflow-hidden h-[400px] sm:h-[600px] lg:h-[900px]">
+                   <div className="bg-slate-50 dark:bg-slate-800/50 p-3 sm:p-6 border-b dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                       <h3 className="font-black text-[10px] sm:text-xs uppercase tracking-widest text-slate-400">AI-Optimized Professional Preview</h3>
+                       <div className="flex gap-2">
+                           <button onClick={() => {
+                             if (analysisResult.rewrittenResume) {
+                                 navigator.clipboard.writeText(analysisResult.rewrittenResume);
+                             }
+                           }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500" title="Copy Raw Text"><Copy className="w-4 h-4" /></button>
+                           <button onClick={onDownloadPdf} className="flex items-center gap-1 sm:gap-2 bg-indigo-600 text-white px-2 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black shadow-lg shadow-indigo-600/20"><Download className="w-3 h-3 sm:w-4 sm:h-4" /> PDF</button>
+                           <button onClick={onDownloadDocx} className="flex items-center gap-1 sm:gap-2 bg-slate-800 text-white px-2 sm:px-4 py-2 rounded-lg text-[10px] sm:text-xs font-black shadow-lg shadow-slate-800/20">↓ DOCX</button>
+                       </div>
+                   </div>
                   <CardBody className="p-0 h-[calc(100%-80px)]">
                       <ResumePreview 
                         ref={resumePreviewRef}
@@ -106,9 +107,9 @@ export function ResultsDashboard({
          )}
 
          {activeResultTab === 'score' && (
-           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              <Card className="border-none shadow-xl rounded-3xl p-10 flex flex-col items-center justify-center text-center bg-white dark:bg-slate-900">
-                 <div className="relative w-48 h-48 flex items-center justify-center mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-4xl mx-auto">
+               <Card className="border-none shadow-xl rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center text-center bg-white dark:bg-slate-900">
+                  <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center mb-6">
                      <svg className="w-full h-full -rotate-90">
                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-100 dark:text-slate-800" />
                        <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="552.6" strokeDashoffset={552.6 - (552.6 * (analysisResult.match_score?.score || analysisResult.match_score) / 100)} className="text-indigo-600 transition-all duration-1000" />
@@ -122,7 +123,7 @@ export function ResultsDashboard({
                  <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Match score</p>
               </Card>
 
-              <Card className="border-none shadow-xl rounded-3xl p-10 space-y-8 bg-white dark:bg-slate-900">
+               <Card className="border-none shadow-xl rounded-3xl p-6 sm:p-10 space-y-8 bg-white dark:bg-slate-900">
                   {[
                      { label: 'JD alignment', val: analysisResult.match_score?.alignment, max: 35, color: 'bg-indigo-500' },
                      { label: 'Quantification', val: analysisResult.match_score?.quantification, max: 30, color: 'bg-indigo-500' },
@@ -144,21 +145,21 @@ export function ResultsDashboard({
          )}
          
          {activeResultTab === 'gaps' && (
-            <div className="grid md:grid-cols-2 gap-8">
-               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+               <Card className="p-4 sm:p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
                   <h3 className="text-xl font-black mb-4">Strengths</h3>
                   <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-300">
                      {analysisResult.strengths?.map((s: string, i: number) => <li key={i} className="flex items-start gap-2"><Sparkles className="w-4 h-4 text-emerald-500 mt-1 flex-shrink-0"/><span>{s}</span></li>) || <li>No strengths listed.</li>}
                   </ul>
                </Card>
-               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
-                  <h3 className="text-xl font-black mb-4 text-red-500">Weaknesses</h3>
+                <Card className="p-4 sm:p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl">
+                   <h3 className="text-xl font-black mb-4 text-red-500">Weaknesses</h3>
                   <ul className="list-disc pl-5 space-y-2 text-slate-600 dark:text-slate-300">
                      {analysisResult.weaknesses?.map((s: string, i: number) => <li key={i} className="flex items-start gap-2"><Target className="w-4 h-4 text-red-400 mt-1 flex-shrink-0"/><span>{s}</span></li>) || <li>No weaknesses listed.</li>}
                   </ul>
                </Card>
-               <Card className="p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl col-span-1 md:col-span-2">
-                  <h3 className="text-xl font-black mb-4 text-indigo-500">Missing Skills & Keywords</h3>
+                <Card className="p-4 sm:p-8 border-none shadow-xl bg-white dark:bg-slate-900 rounded-3xl sm:col-span-2">
+                   <h3 className="text-xl font-black mb-4 text-indigo-500">Missing Skills & Keywords</h3>
                   <div className="flex flex-wrap gap-2">
                      {analysisResult.missing_skills?.map((s: string, i: number) => <Badge key={i} variant="secondary" className="bg-slate-100 dark:bg-slate-800 border-none px-3 py-1">{s}</Badge>) || <span>None detected.</span>}
                      {analysisResult.gaps?.missing_keywords?.map((s: string, i: number) => <Badge key={`k-${i}`} variant="secondary" className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-none px-3 py-1">{s}</Badge>)}

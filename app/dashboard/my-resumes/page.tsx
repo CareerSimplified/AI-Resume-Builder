@@ -10,7 +10,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { resumeService } from '@/services/database.service'
 import { Resume } from '@/types'
-import Link from 'next/link'
 
 import { userSidebarItems as sidebarItems } from '@/config/sidebar'
 
@@ -136,11 +135,8 @@ export default function MyResumesPage() {
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
               Refresh
             </Button>
-            <Button asChild>
-              <Link href="/dashboard/upload-resume">
-                <Plus className="w-4 h-4 mr-2" />
-                Upload New Resume
-              </Link>
+            <Button href="/dashboard/upload-resume" leftIcon={<Plus className="w-4 h-4" />}>
+              Upload New Resume
             </Button>
           </div>
         </div>
@@ -171,15 +167,12 @@ export default function MyResumesPage() {
         ) : resumes.length === 0 ? (
           /* Empty State */
           <Card className="border-2 border-dashed border-gray-200 dark:border-gray-800">
-            <CardBody className="p-12 text-center">
+            <CardBody className="p-8 sm:p-12 text-center">
               <FileText className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">No Resumes Yet</h3>
               <p className="text-gray-500 dark:text-gray-500 mb-6">Upload your first resume to get started with AI-powered analysis</p>
-              <Button asChild size="lg">
-                <Link href="/dashboard/upload-resume">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Your First Resume
-                </Link>
+              <Button size="lg" href="/dashboard/upload-resume" leftIcon={<Upload className="w-4 h-4" />}>
+                Upload Your First Resume
               </Button>
             </CardBody>
           </Card>
@@ -228,7 +221,7 @@ export default function MyResumesPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 w-full md:w-auto md:flex-col lg:flex-row">
+                  <div className="flex gap-2 w-full md:w-auto flex-wrap">
                     {resume.report && (
                       <Button size="sm" variant="primary" href={`/dashboard/reports/${resume.id}`} leftIcon={<Eye className="w-4 h-4" />} className="flex-1 md:flex-none">
                         View Report

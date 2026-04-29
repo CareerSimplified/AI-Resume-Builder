@@ -64,8 +64,8 @@ export default function AdminJobDescriptionsPage() {
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Job Description Management</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Job Description Management</h1>
           <Badge variant="primary">{filtered.length} Records</Badge>
         </div>
 

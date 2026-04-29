@@ -71,12 +71,12 @@ export default function AdminResumesPage() {
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
        <div className="max-w-7xl mx-auto space-y-8 pb-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Resume Management</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Manage and monitor all uploaded files across the system.</p>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">Resume Management</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Manage and monitor all uploaded files across the system.</p>
           </div>
-          <Badge variant="primary">{filteredResumes.length} Files Total</Badge>
+          <Badge variant="primary" className="flex-shrink-0">{filteredResumes.length} Files Total</Badge>
         </div>
 
         <Card className="border-none shadow-lg bg-white dark:bg-[#0b0f1a]">
