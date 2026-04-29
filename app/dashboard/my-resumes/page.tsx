@@ -5,7 +5,7 @@ import { Home, FileText, Plus, BarChart3, Settings, Download, Eye, Trash2, Loade
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { Badge, ProgressBar } from '@/components/ui'
+import { Badge, ProgressBar, ConfirmDialog } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { resumeService } from '@/services/database.service'
@@ -37,6 +37,7 @@ export default function MyResumesPage() {
   const [loading, setLoading] = useState(true)
   const [apiError, setApiError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     if (mounted && !authLoading && user?.id) {
@@ -86,17 +87,22 @@ export default function MyResumesPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this resume?')) return
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmId(id)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return
 
     try {
-      setDeleting(id)
-      const { error: deleteError } = await resumeService.delete(id)
+      setDeleting(deleteConfirmId)
+      setDeleteConfirmId(null)
+      const { error: deleteError } = await resumeService.delete(deleteConfirmId)
       if (deleteError) {
         error('Failed to delete resume')
         return
       }
-      setResumes(resumes.filter((r) => r.id !== id))
+      setResumes(resumes.filter((r) => r.id !== deleteConfirmId))
       success('Resume deleted successfully')
     } catch (err: any) {
       console.error('Error deleting resume:', err)
@@ -197,12 +203,12 @@ export default function MyResumesPage() {
 
                     {/* Report Status */}
                     {resume.report ? (
-                      <div className="flex items-center gap-4 mt-3">
-                        <Badge variant="success" className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700">
+                      <div className="flex items-center gap-4 mt-3 flex-nowrap flex-wrap">
+                        <Badge variant="success" className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 whitespace-nowrap">
                           <CheckCircle className="w-3 h-3" />
                           Analysis Complete
                         </Badge>
-                        <div className="flex gap-6 text-sm">
+                        <div className="flex gap-4 text-sm">
                           <div>
                             <span className="text-gray-500 dark:text-gray-400">Match: </span>
                             <span className="font-semibold text-gray-900 dark:text-white">{resume.report.match_score}%</span>
@@ -224,11 +230,8 @@ export default function MyResumesPage() {
                   {/* Actions */}
                   <div className="flex gap-2 w-full md:w-auto md:flex-col lg:flex-row">
                     {resume.report && (
-                      <Button size="sm" variant="primary" asChild className="flex-1 md:flex-none">
-                        <Link href={`/dashboard/reports/${resume.id}`}>
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Report
-                        </Link>
+                      <Button size="sm" variant="primary" href={`/dashboard/reports/${resume.id}`} leftIcon={<Eye className="w-4 h-4" />} className="flex-1 md:flex-none">
+                        View Report
                       </Button>
                     )}
                     
@@ -248,7 +251,7 @@ export default function MyResumesPage() {
                       size="sm"
                       variant="danger"
                       disabled={deleting === resume.id}
-                      onClick={() => handleDelete(resume.id)}
+                      onClick={() => handleDeleteClick(resume.id)}
                       className="flex-1 md:flex-none"
                     >
                       {deleting === resume.id ? (
@@ -265,6 +268,16 @@ export default function MyResumesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Resume"
+        message="Are you sure you want to delete this resume? This action cannot be undone."
+        confirmText="Delete"
+        loading={!!deleting}
+      />
     </DashboardLayout>
   )
 }

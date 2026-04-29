@@ -4,17 +4,21 @@ import { useEffect, useState } from 'react'
 import { Briefcase, Calendar, Search, Trash2, User } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody } from '@/components/Card'
-import { Badge } from '@/components/ui'
+import { Badge, ConfirmDialog } from '@/components/ui'
 import { Button } from '@/components/Button'
 import { useRequireAdmin } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { adminSidebarItems as sidebarItems } from '@/config/sidebar'
 import { adminService } from '@/services/database.service'
 
 export default function AdminJobDescriptionsPage() {
   const { loading } = useRequireAdmin()
+  const { success, error } = useToast()
   const [items, setItems] = useState<any[]>([])
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     void fetchItems()
@@ -27,10 +31,28 @@ export default function AdminJobDescriptionsPage() {
     setIsLoading(false)
   }
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete job description "${title}"?`)) return
-    await adminService.deleteJobDescription(id)
-    setItems((prev) => prev.filter((x) => x.id !== id))
+  const handleDeleteClick = (id: string, title: string) => {
+    setDeleteConfirm({ id, title })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return
+
+    try {
+      setIsDeleting(true)
+      const { error: err } = await adminService.deleteJobDescription(deleteConfirm.id)
+      if (err) {
+        error(err.message || 'Failed to delete job description')
+        return
+      }
+      setItems((prev) => prev.filter((x) => x.id !== deleteConfirm.id))
+      success('Job description deleted successfully')
+    } catch (err: any) {
+      error(err.message || 'Error deleting job description')
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirm(null)
+    }
   }
 
   const filtered = items.filter((item) =>
@@ -96,7 +118,7 @@ export default function AdminJobDescriptionsPage() {
                         <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{new Date(item.created_at).toLocaleDateString()}</div>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <Button size="sm" variant="danger" onClick={() => handleDelete(item.id, item.title || 'Untitled')}>
+                        <Button size="sm" variant="danger" onClick={() => handleDeleteClick(item.id, item.title || 'Untitled')}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </td>
@@ -108,6 +130,16 @@ export default function AdminJobDescriptionsPage() {
           </div>
         </Card>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Job Description"
+        message={`Are you sure you want to delete "${deleteConfirm?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        loading={isDeleting}
+      />
     </DashboardLayout>
   )
 }

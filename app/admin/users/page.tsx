@@ -5,7 +5,7 @@ import { Users, Trash2, Search, Eye, X, FileText, BarChart3, User, ShieldAlert }
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody, CardHeader } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { Badge } from '@/components/ui'
+import { Badge, ConfirmDialog } from '@/components/ui'
 import { useAdminRoute } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { adminSidebarItems } from '@/config/sidebar'
@@ -25,6 +25,10 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ userId: string; userEmail: string } | null>(null)
+  const [roleConfirm, setRoleConfirm] = useState<{ userId: string; currentRole: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -52,30 +56,43 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!confirm(`Are you sure you want to delete user "${userEmail}"? This will also delete all their resumes and reports. This action cannot be undone.`)) {
-      return
-    }
+  const handleDeleteUserClick = (userId: string, userEmail: string) => {
+    setDeleteConfirm({ userId, userEmail })
+  }
+
+  const handleDeleteUserConfirm = async () => {
+    if (!deleteConfirm) return
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+      setIsDeleting(true)
+      setDeleteConfirm(null)
+      const res = await fetch(`/api/admin/users/${deleteConfirm.userId}`, { method: 'DELETE' })
       const result = await res.json()
       if (!result.success) throw new Error(result.error)
 
-      setUsers(users.filter((u) => u.id !== userId))
+      setUsers(users.filter((u) => u.id !== deleteConfirm.userId))
       success('User deleted successfully')
     } catch (err: any) {
       console.error('Error deleting user:', err)
       error(err.message || 'Failed to delete user')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
-  const handleUpdateRole = async (userId: string, currentRole: string) => {
-    const newRole = currentRole === 'admin' ? 'user' : 'admin'
-    if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return
+  const handleUpdateRoleClick = (userId: string, currentRole: string) => {
+    setRoleConfirm({ userId, currentRole })
+  }
+
+  const handleUpdateRoleConfirm = async () => {
+    if (!roleConfirm) return
+
+    const newRole = roleConfirm.currentRole === 'admin' ? 'user' : 'admin'
 
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      setIsUpdatingRole(true)
+      setRoleConfirm(null)
+      const res = await fetch(`/api/admin/users/${roleConfirm.userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
@@ -83,10 +100,12 @@ export default function AdminUsersPage() {
       const result = await res.json()
       if (!result.success) throw new Error(result.error)
 
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u))
+      setUsers(users.map(u => u.id === roleConfirm.userId ? { ...u, role: newRole } : u))
       success(`User role updated to ${newRole}`)
     } catch (err: any) {
       error(err.message || 'Failed to update role')
+    } finally {
+      setIsUpdatingRole(false)
     }
   }
 
@@ -239,7 +258,7 @@ export default function AdminUsersPage() {
                           <Button
                             size="sm"
                             variant="danger"
-                            onClick={() => handleDeleteUser(u.id, u.email)}
+                            onClick={() => handleDeleteUserClick(u.id, u.email)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -327,7 +346,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between gap-3">
               <Button variant="danger" onClick={() => {
-                handleDeleteUser(selectedUser.id, selectedUser.email)
+                handleDeleteUserClick(selectedUser.id, selectedUser.email)
                 setShowModal(false)
               }}>
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -340,6 +359,27 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteUserConfirm}
+        title="Delete User"
+        message={`Are you sure you want to delete user "${deleteConfirm?.userEmail}"? This will also delete all their resumes and reports. This action cannot be undone.`}
+        confirmText="Delete User"
+        loading={isDeleting}
+      />
+
+      <ConfirmDialog
+        isOpen={!!roleConfirm}
+        onClose={() => setRoleConfirm(null)}
+        onConfirm={handleUpdateRoleConfirm}
+        title="Change User Role"
+        message={`Are you sure you want to change this user's role to ${roleConfirm?.currentRole === 'admin' ? 'user' : 'admin'}?`}
+        confirmText={roleConfirm?.currentRole === 'admin' ? 'Make User' : 'Make Admin'}
+        loading={isUpdatingRole}
+        variant="warning"
+      />
     </DashboardLayout>
   )
 }

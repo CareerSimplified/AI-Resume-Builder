@@ -5,16 +5,20 @@ import { FileText, Search, Trash2, Calendar, User, Download, ExternalLink } from
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody, CardHeader } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { Badge } from '@/components/ui'
+import { Badge, ConfirmDialog } from '@/components/ui'
 import { useRequireAdmin } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 import { adminSidebarItems as sidebarItems } from '@/config/sidebar'
 import { adminService } from '@/services/database.service'
 
 export default function AdminResumesPage() {
   const { user, loading } = useRequireAdmin()
+  const { success, error } = useToast()
   const [resumes, setResumes] = useState<any[]>([])
   const [resumesLoading, setResumesLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ resumeId: string; fileName: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchResumes()
@@ -32,14 +36,28 @@ export default function AdminResumesPage() {
     }
   }
 
-  const handleDeleteResume = async (resumeId: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return
+  const handleDeleteResumeClick = (resumeId: string, fileName: string) => {
+    setDeleteConfirm({ resumeId, fileName })
+  }
+
+  const handleDeleteResumeConfirm = async () => {
+    if (!deleteConfirm) return
 
     try {
-      await adminService.deleteResume(resumeId)
-      setResumes(resumes.filter((r) => r.id !== resumeId))
-    } catch (error) {
-      console.error('Error deleting resume:', error)
+      setIsDeleting(true)
+      setDeleteConfirm(null)
+      const { error: err } = await adminService.deleteResume(deleteConfirm.resumeId)
+      if (err) {
+        error(err.message || 'Failed to delete resume')
+        return
+      }
+      setResumes(resumes.filter((r) => r.id !== deleteConfirm.resumeId))
+      success('Resume deleted successfully')
+    } catch (err: any) {
+      console.error('Error deleting resume:', err)
+      error('Error deleting resume')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -129,12 +147,12 @@ export default function AdminResumesPage() {
                                 <ExternalLink className="w-4 h-4" />
                               </Button>
                            </a>
-                           <Button
-                             size="sm"
-                             variant="danger"
-                             onClick={() => handleDeleteResume(r.id, r.file_name)}
-                             title="Delete"
-                           >
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              onClick={() => handleDeleteResumeClick(r.id, r.file_name)}
+                              title="Delete"
+                            >
                              <Trash2 className="w-4 h-4" />
                            </Button>
                          </div>
@@ -147,6 +165,16 @@ export default function AdminResumesPage() {
           </Card>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteResumeConfirm}
+        title="Delete Resume"
+        message={`Are you sure you want to delete "${deleteConfirm?.fileName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        loading={isDeleting}
+      />
     </DashboardLayout>
   )
 }

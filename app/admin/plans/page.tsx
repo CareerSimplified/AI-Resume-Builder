@@ -5,7 +5,7 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { adminSidebarItems } from '@/config/sidebar'
 import { Card, CardBody } from '@/components/Card'
-import { Button, Badge } from '@/components/ui'
+import { Button, Badge, ConfirmDialog } from '@/components/ui'
 import { planService } from '@/services/database.service'
 import { Plan } from '@/types'
 import { useToast } from '@/hooks/useToast'
@@ -15,6 +15,8 @@ export default function AdminPlansPage() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Plan>>({})
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { success, error } = useToast()
 
   useEffect(() => {
@@ -39,13 +41,25 @@ export default function AdminPlansPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this plan?')) return
-    const { error: err } = await planService.delete(id)
-    if (err) error(err.message)
-    else {
-      success('Plan deleted')
-      fetchPlans()
+  async function handleDeleteClick(id: string) {
+    setDeleteConfirmId(id)
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteConfirmId) return
+    try {
+      setIsDeleting(true)
+      setDeleteConfirmId(null)
+      const { error: err } = await planService.delete(deleteConfirmId)
+      if (err) error(err.message)
+      else {
+        success('Plan deleted')
+        fetchPlans()
+      }
+    } catch (err: any) {
+      error(err.message || 'Failed to delete plan')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -148,10 +162,10 @@ export default function AdminPlansPage() {
                            >
                              <Edit className="w-5 h-5" />
                            </button>
-                           <button 
-                             onClick={() => handleDelete(plan.id)}
-                             className="p-3 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl text-red-500 transition-colors"
-                           >
+                            <button 
+                              onClick={() => handleDeleteClick(plan.id)}
+                              className="p-3 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl text-red-500 transition-colors"
+                            >
                              <Trash2 className="w-5 h-5" />
                            </button>
                         </div>
@@ -162,6 +176,16 @@ export default function AdminPlansPage() {
            ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Plan"
+        message="Are you sure you want to delete this plan? This action cannot be undone."
+        confirmText="Delete"
+        loading={isDeleting}
+      />
     </DashboardLayout>
   )
 }
