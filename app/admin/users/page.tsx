@@ -118,8 +118,12 @@ export default function AdminUsersPage() {
 
   const filteredUsers = users.filter(u =>
     u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    u.role.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const adminCount = users.filter(u => u.role === 'admin').length
+  const userCount = users.filter(u => u.role !== 'admin').length
 
   if (loading) {
     return (

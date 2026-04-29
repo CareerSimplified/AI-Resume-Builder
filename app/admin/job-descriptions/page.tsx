@@ -9,7 +9,6 @@ import { Button } from '@/components/Button'
 import { useRequireAdmin } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { adminSidebarItems as sidebarItems } from '@/config/sidebar'
-import { adminService } from '@/services/database.service'
 
 export default function AdminJobDescriptionsPage() {
   const { loading } = useRequireAdmin()
@@ -26,9 +25,16 @@ export default function AdminJobDescriptionsPage() {
 
   const fetchItems = async () => {
     setIsLoading(true)
-    const { data } = await adminService.getAllJobDescriptions()
-    setItems(data || [])
-    setIsLoading(false)
+    try {
+      const res = await fetch('/api/admin/job-descriptions')
+      const result = await res.json()
+      if (result.success) setItems(result.data || [])
+      else error(result.error || 'Failed to load job descriptions')
+    } catch (err: any) {
+      error(err.message || 'Failed to load job descriptions')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleDeleteClick = (id: string, title: string) => {
@@ -40,11 +46,9 @@ export default function AdminJobDescriptionsPage() {
 
     try {
       setIsDeleting(true)
-      const { error: err } = await adminService.deleteJobDescription(deleteConfirm.id)
-      if (err) {
-        error(err.message || 'Failed to delete job description')
-        return
-      }
+      const res = await fetch(`/api/admin/job-descriptions?id=${deleteConfirm.id}`, { method: 'DELETE' })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error)
       setItems((prev) => prev.filter((x) => x.id !== deleteConfirm.id))
       success('Job description deleted successfully')
     } catch (err: any) {

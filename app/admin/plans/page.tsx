@@ -6,7 +6,6 @@ import { DashboardLayout } from '@/components/DashboardLayout'
 import { adminSidebarItems } from '@/config/sidebar'
 import { Card, CardBody } from '@/components/Card'
 import { Button, Badge, ConfirmDialog } from '@/components/ui'
-import { planService } from '@/services/database.service'
 import { Plan } from '@/types'
 import { useToast } from '@/hooks/useToast'
 
@@ -24,20 +23,33 @@ export default function AdminPlansPage() {
   }, [])
 
   async function fetchPlans() {
-    const { data, error: err } = await planService.getAll()
-    if (!err && data) setPlans(data)
-    setLoading(false)
+    try {
+      const res = await fetch('/api/admin/plans')
+      const result = await res.json()
+      if (result.success) setPlans(result.data || [])
+      else error(result.error || 'Failed to load plans')
+    } catch (err: any) {
+      error(err.message || 'Failed to load plans')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSave() {
     if (!editingId) return
-    const { error: err } = await planService.update(editingId, editForm)
-    if (err) {
-      error(err.message)
-    } else {
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, ...editForm }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error)
       success('Plan updated successfully')
       setEditingId(null)
       fetchPlans()
+    } catch (err: any) {
+      error(err.message)
     }
   }
 
@@ -50,12 +62,11 @@ export default function AdminPlansPage() {
     try {
       setIsDeleting(true)
       setDeleteConfirmId(null)
-      const { error: err } = await planService.delete(deleteConfirmId)
-      if (err) error(err.message)
-      else {
-        success('Plan deleted')
-        fetchPlans()
-      }
+      const res = await fetch(`/api/admin/plans?id=${deleteConfirmId}`, { method: 'DELETE' })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error)
+      success('Plan deleted')
+      fetchPlans()
     } catch (err: any) {
       error(err.message || 'Failed to delete plan')
     } finally {
@@ -64,19 +75,26 @@ export default function AdminPlansPage() {
   }
 
   async function handleCreate() {
-    const newPlan: any = {
-      name: 'New Plan',
-      price_inr: 0,
-      description: 'Describe the plan...',
-      features: ['Feature 1'],
-      is_popular: false,
-      credit_limit: 5
-    }
-    const { error: err } = await planService.create(newPlan)
-    if (err) error(err.message)
-    else {
+    try {
+      const newPlan: any = {
+        name: 'New Plan',
+        price_inr: 0,
+        description: 'Describe the plan...',
+        features: ['Feature 1'],
+        is_popular: false,
+        credit_limit: 5
+      }
+      const res = await fetch('/api/admin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPlan),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error)
       success('New plan created')
       fetchPlans()
+    } catch (err: any) {
+      error(err.message)
     }
   }
 

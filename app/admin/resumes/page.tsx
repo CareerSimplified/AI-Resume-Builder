@@ -9,7 +9,6 @@ import { Badge, ConfirmDialog } from '@/components/ui'
 import { useRequireAdmin } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { adminSidebarItems as sidebarItems } from '@/config/sidebar'
-import { adminService } from '@/services/database.service'
 
 export default function AdminResumesPage() {
   const { user, loading } = useRequireAdmin()
@@ -27,8 +26,9 @@ export default function AdminResumesPage() {
   const fetchResumes = async () => {
     setResumesLoading(true)
     try {
-      const { data } = await adminService.getAllResumes()
-      setResumes(data || [])
+      const res = await fetch('/api/admin/resumes')
+      const result = await res.json()
+      if (result.success) setResumes(result.data || [])
     } catch (error) {
       console.error('Error fetching resumes:', error)
     } finally {
@@ -45,19 +45,17 @@ export default function AdminResumesPage() {
 
     try {
       setIsDeleting(true)
-      setDeleteConfirm(null)
-      const { error: err } = await adminService.deleteResume(deleteConfirm.resumeId)
-      if (err) {
-        error(err.message || 'Failed to delete resume')
-        return
-      }
+      const res = await fetch(`/api/admin/resumes?id=${deleteConfirm.resumeId}`, { method: 'DELETE' })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error)
       setResumes(resumes.filter((r) => r.id !== deleteConfirm.resumeId))
       success('Resume deleted successfully')
     } catch (err: any) {
       console.error('Error deleting resume:', err)
-      error('Error deleting resume')
+      error(err.message || 'Error deleting resume')
     } finally {
       setIsDeleting(false)
+      setDeleteConfirm(null)
     }
   }
 

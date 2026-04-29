@@ -33,7 +33,7 @@ export const userSidebarItems: SidebarItem[] = [
 ]
 
 export const adminSidebarItems: SidebarItem[] = [
-  { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Job Descriptions', href: '/admin/job-descriptions', icon: Briefcase },
   { label: 'Resumes', href: '/admin/resumes', icon: FileText },
