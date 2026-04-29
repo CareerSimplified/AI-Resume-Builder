@@ -53,26 +53,41 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // 2. Perform Auth check ONLY for routes that need it
-  const isAuthRoute = pathname.startsWith('/auth')
-  const isDashboardRoute = pathname.startsWith('/dashboard')
-  const isAdminRoute = pathname.startsWith('/admin')
+  // 2. Check auth - bypass for admin login
+  const pathnameLower = pathname.toLowerCase()
+  const isAdminLogin = pathnameLower === '/admin/login' || pathnameLower === '/admin/login/'
+  
+  if (isAdminLogin) {
+    return NextResponse.next()
+  }
 
-  if (isDashboardRoute || isAdminRoute || isAuthRoute) {
+  const isAdminRoute = pathnameLower.startsWith('/admin/')
+  const isAuthRoute = pathnameLower.startsWith('/auth')
+  const isDashboardRoute = pathnameLower.startsWith('/dashboard')
+
+  // All admin routes except login need auth
+  if (isAdminRoute) {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        return NextResponse.redirect(new URL('/admin/login?redirect=' + encodeURIComponent(pathname), request.url))
+      }
+    } catch {
+      return NextResponse.redirect(new URL('/admin/login?redirect=' + encodeURIComponent(pathname), request.url))
+    }
+    return NextResponse.next()
+  }
+
+  if (isAuthRoute || isDashboardRoute) {
     const { data: { user }, error } = await supabase.auth.getUser()
 
-    if (isDashboardRoute || isAdminRoute) {
-      if (error || !user) {
-        const redirectUrl = new URL('/auth/login', request.url)
-        redirectUrl.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(redirectUrl)
-      }
+    if (isAuthRoute && user) {
+      const redirectTo = request.nextUrl.searchParams.get('redirect') || '/dashboard'
+      return NextResponse.redirect(new URL(redirectTo, request.url))
     }
 
-    if (isAuthRoute && user) {
-      const searchParams = request.nextUrl.searchParams
-      const redirectTo = searchParams.get('redirect') || '/dashboard'
-      return NextResponse.redirect(new URL(redirectTo, request.url))
+    if (isDashboardRoute && (error || !user)) {
+      return NextResponse.redirect(new URL('/auth/login?redirect=' + encodeURIComponent(pathname), request.url))
     }
   }
 

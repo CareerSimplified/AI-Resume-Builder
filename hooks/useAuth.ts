@@ -37,9 +37,9 @@ export const useRequireAdmin = () => {
   useEffect(() => {
     if (!mounted || loading) return
     if (!user) {
-      router.push('/auth/login')
+      router.push('/admin/login?redirect=/admin/dashboard')
     } else if (user.role !== 'admin') {
-      router.push('/dashboard')
+      router.push('/admin/login')
     }
   }, [user, loading, mounted, router])
 

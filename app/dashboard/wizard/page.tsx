@@ -41,6 +41,8 @@ export default function WizardPage() {
     const [companyName, setCompanyName] = useState('')
     const [roleTitle, setRoleTitle] = useState('')
     const [jobDescription, setJobDescription] = useState('')
+    const [savedJobs, setSavedJobs] = useState<any[]>([])
+    const [selectedJdId, setSelectedJdId] = useState<string | null>(null)
 
     // Analysis state
     const [processingStep, setProcessingStep] = useState(0)
@@ -143,22 +145,28 @@ export default function WizardPage() {
             let resumeId = null;
 
             // 2. Save JD if Alignment mode
+            let finalJdId = jdId;
             if (mode === 'JD_ALIGNMENT') {
-                const { data: jdData, error: jdError } = await jobDescriptionService.create(user.id, {
-                    company: companyName || 'Not Specified',
-                    title: roleTitle || 'Not Specified',
-                    description: jobDescription,
-                    skills: [],
-                    experience: 'mid'
-                })
-                if (jdError) console.error("Error saving JD:", jdError)
-                jdId = (jdData as any)?.id;
+                // Use existing JD if provided, otherwise create new
+                if (jdId) {
+                    finalJdId = jdId;
+                } else if (jobDescription) {
+                    const { data: jdData, error: jdError } = await jobDescriptionService.create(user.id, {
+                        company: companyName || 'Not Specified',
+                        title: roleTitle || 'Not Specified',
+                        description: jobDescription,
+                        skills: [],
+                        experience: 'mid'
+                    })
+                    if (jdError) console.error("Error saving JD:", jdError)
+                    finalJdId = (jdData as any)?.id;
+                }
             }
 
-            // 3. Save Resume
+            // 3. Save Resume with JD reference
             const { data: resumes, error: resumeError } = await resumeService.create(
                 user.id,
-                jdId || null,
+                finalJdId || null,
                 '', // fileUrl placeholder
                 text,
                 selectedFile.name
@@ -175,7 +183,7 @@ export default function WizardPage() {
                     jobDescription: mode === 'JD_ALIGNMENT' ? jobDescription : undefined,
                     resumeId: resumeId,
                     userId: user.id,
-                    jdId: jdId,
+                    jdId: finalJdId,
                     mode: mode,
                     isPro: true // Bypassing Pro check for now
                 })
@@ -216,7 +224,7 @@ export default function WizardPage() {
         // }
 
         try {
-            loadingToast('Preparing your DOCX...')
+            // loadingToast('Preparing your DOCX...')
             const res = await fetch('/api/resume/download', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

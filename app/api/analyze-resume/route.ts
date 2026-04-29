@@ -35,10 +35,11 @@ export async function POST(req: NextRequest) {
     console.log(`[API/analyze] Starting ${mode} analysis for user:`, userId)
     console.log(`[API/analyze] Resume length: ${resumeText.length}, JD length: ${jobDescription?.length || 0}`)
 
+    // Client takes precedence - if client says pro, bypass limits
     let userProStatus = isPro;
     
-    // Check Limits
-    if (supabaseAdmin && userId) {
+    // Only check database limits if client didn't bypass
+    if (!userProStatus && supabaseAdmin && userId) {
         // First reset limits if a new day (IST)
         await supabaseAdmin.rpc('reset_daily_limits', { user_uuid: userId });
         

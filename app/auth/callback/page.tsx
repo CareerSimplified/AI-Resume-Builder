@@ -37,7 +37,7 @@ export default function CallbackPage() {
             if (redirectTo) {
                window.location.href = redirectTo
             } else if (userRole === 'admin') {
-              window.location.href = '/admin'
+              window.location.href = '/admin/dashboard'
             } else {
               window.location.href = '/dashboard'
             }
