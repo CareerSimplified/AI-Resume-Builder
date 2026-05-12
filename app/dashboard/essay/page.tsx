@@ -61,56 +61,79 @@ export default function EssayPage() {
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 sm:p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                AI <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Essay</span> Generator
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 font-medium mt-1">
-                Transform your ideas into professionally structured essays in seconds.
-              </p>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#020617] p-4 sm:p-8 lg:p-12 font-sans selection:bg-indigo-500/30">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Header section with refined typography and background glow */}
+          <div className="relative">
+            <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-violet-500/10 rounded-full blur-3xl" />
+            
+            <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Advanced AI Suite</span>
+                </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-[0.9]">
+                  Master <span className="text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600">Manuscript</span>
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-lg max-w-2xl">
+                  Transform raw concepts into scholarly, structured essays with elite AI precision.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Input Section */}
-            <div className="lg:col-span-1 space-y-6">
-              <Card className="border-none shadow-xl bg-white dark:bg-gray-900 rounded-3xl overflow-hidden">
-                <CardBody className="p-6 sm:p-8 space-y-6">
-                  <div>
-                    <label className="block text-sm font-black uppercase tracking-widest text-gray-400 mb-3">Topic or Question</label>
+          <div className="grid lg:grid-cols-12 gap-10 items-start">
+            {/* Input & Prompt Control Section (4 cols) */}
+            <div className="lg:col-span-4 space-y-8">
+              <Card className="border-none shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border border-white/20">
+                <CardBody className="p-8 space-y-8">
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                      Topic & Context
+                    </label>
                     <textarea
-                      className="w-full h-48 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none text-gray-900 dark:text-white font-medium"
-                      placeholder="e.g., The impact of AI on modern healthcare and patient outcomes..."
+                      className="w-full h-56 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all resize-none text-slate-900 dark:text-white font-medium placeholder:text-slate-400 placeholder:font-normal leading-relaxed"
+                      placeholder="e.g., The ethical implications of neural-link technologies on human identity and privacy..."
                       value={question}
                       onChange={(e) => setQuestion(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-black uppercase tracking-widest text-gray-400 mb-3">Essay Style</label>
-                    <div className="space-y-3">
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                      Scholarly Style
+                    </label>
+                    <div className="space-y-2.5">
                       {PROMPT_TYPES.map((p) => (
                         <button
                           key={p.id}
                           onClick={() => setSelectedPrompt(p.id)}
-                          className={`w-full text-left p-4 rounded-2xl border-2 transition-all group ${
+                          className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 relative group ${
                             selectedPrompt === p.id
-                              ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20'
-                              : 'border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-800 bg-white dark:bg-gray-900'
+                              ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20 shadow-lg shadow-indigo-500/5'
+                              : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 bg-transparent'
                           }`}
                         >
-                          <div className="flex items-center gap-3 mb-1">
-                            <BookOpen className={`w-4 h-4 ${selectedPrompt === p.id ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-400'}`} />
-                            <span className={`font-black text-sm ${selectedPrompt === p.id ? 'text-indigo-600' : 'text-gray-700 dark:text-gray-300'}`}>
-                              {p.label}
-                            </span>
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-xl transition-colors ${selectedPrompt === p.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:text-indigo-500'}`}>
+                              <BookOpen className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className={`font-black text-xs uppercase tracking-tight block ${selectedPrompt === p.id ? 'text-indigo-600' : 'text-slate-700 dark:text-slate-300'}`}>
+                                {p.label}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {p.description.split(',')[0]}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium pl-7">
-                            {p.description}
-                          </p>
+                          {selectedPrompt === p.id && (
+                             <div className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -119,42 +142,54 @@ export default function EssayPage() {
                   <Button
                     fullWidth
                     size="lg"
-                    className="h-14 rounded-2xl font-black text-lg shadow-xl shadow-indigo-600/20"
+                    className="h-16 rounded-3xl font-black text-lg shadow-2xl shadow-indigo-600/30 bg-gradient-to-br from-indigo-600 to-violet-700 hover:scale-[1.02] active:scale-[0.98] transition-all border-none"
                     disabled={isGenerating || !question.trim()}
                     onClick={handleGenerate}
                   >
                     {isGenerating ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Generating...
-                      </>
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Architecting...</span>
+                      </div>
                     ) : (
-                      <>
-                        <Sparkles className="w-5 h-5 mr-2" />
-                        Generate Essay
-                      </>
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-5 h-5" />
+                        <span>Generate Masterpiece</span>
+                      </div>
                     )}
                   </Button>
                 </CardBody>
               </Card>
             </div>
 
-            {/* Output Section */}
-            <div className="lg:col-span-2">
-              <Card className="border-none shadow-2xl bg-white dark:bg-gray-900 rounded-3xl overflow-hidden min-h-[600px] flex flex-col">
-                <div className="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 border-b dark:border-gray-800 flex items-center justify-between">
-                  <h3 className="font-black text-xs uppercase tracking-widest text-gray-400">Generated Manuscript</h3>
+            {/* Output Canvas (8 cols) */}
+            <div className="lg:col-span-8">
+              <Card className="border-none shadow-2xl bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden min-h-[750px] flex flex-col border border-white/10 relative">
+                {/* Visual texture for the paper feel */}
+                <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/notebook.png')]" />
+                
+                <div className="relative z-10 bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-md p-6 sm:px-10 border-b dark:border-slate-800/50 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                       <FileText className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Manuscript Preview</h3>
+                      {essay && <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest mt-0.5">Analysis Complete</p>}
+                    </div>
+                  </div>
+                  
                   {essay && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button
                         onClick={handleCopy}
-                        className="p-2 hover:bg-white dark:hover:bg-gray-700 rounded-xl text-gray-500 transition-colors"
-                        title="Copy Text"
+                        className="p-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl text-slate-500 shadow-sm transition-all border border-slate-100 dark:border-slate-700"
+                        title="Copy to Clipboard"
                       >
-                        <Copy className="w-5 h-5" />
+                        <Copy className="w-4 h-4" />
                       </button>
                       <button
-                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black"
+                        className="flex items-center gap-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-2xl text-xs font-black shadow-lg hover:translate-y-[-1px] active:translate-y-0 transition-all"
                         onClick={() => {
                           const blob = new Blob([essay], { type: 'text/markdown' })
                           const url = window.URL.createObjectURL(blob)
@@ -164,33 +199,49 @@ export default function EssayPage() {
                           a.click()
                         }}
                       >
-                        <Download className="w-4 h-4" /> Export
+                        <Download className="w-4 h-4" /> Export MD
                       </button>
                     </div>
                   )}
                 </div>
 
-                <CardBody className="flex-1 p-8 sm:p-12 overflow-y-auto">
+                <CardBody className="relative z-10 flex-1 p-8 sm:p-14 lg:p-20 overflow-y-auto custom-scrollbar">
                   {isGenerating ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                      <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center animate-pulse">
-                        <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin" />
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-20">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full animate-pulse" />
+                        <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl flex items-center justify-center relative">
+                          <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin" />
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xl font-black text-gray-900 dark:text-white mb-2">Composing your essay...</h4>
-                        <p className="text-gray-500 dark:text-gray-400 font-medium">Our AI is structuring arguments and refining prose.</p>
+                      <div className="space-y-3">
+                        <h4 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Composing Manuscript</h4>
+                        <div className="flex justify-center gap-1">
+                          {[0, 1, 2].map((i) => (
+                            <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                          ))}
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm max-w-sm mx-auto">
+                          Our linguistic engines are structuring your arguments and refining semantic coherence.
+                        </p>
                       </div>
                     </div>
                   ) : essay ? (
-                    <div className="prose dark:prose-invert max-w-none prose-headings:font-black prose-p:font-medium prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-headings:text-gray-900 dark:prose-headings:text-white prose-indigo">
+                    <div className="prose dark:prose-invert max-w-none prose-headings:font-black prose-p:font-medium prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-headings:text-slate-900 dark:prose-headings:text-white prose-indigo prose-lg leading-relaxed">
                       <div className="whitespace-pre-wrap">{essay}</div>
                     </div>
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale">
-                      <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-3xl flex items-center justify-center mb-6 rotate-3">
-                        <BookOpen className="w-12 h-12 text-gray-400" />
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-8 py-20">
+                      <div className="relative group">
+                         <div className="absolute inset-0 bg-slate-200 dark:bg-slate-800 blur-2xl rounded-full group-hover:bg-indigo-500/10 transition-colors" />
+                         <div className="w-32 h-32 bg-slate-100 dark:bg-slate-800/50 rounded-[2.5rem] flex items-center justify-center mb-6 relative border border-slate-200 dark:border-slate-800">
+                            <BookOpen className="w-14 h-14 text-slate-300 dark:text-slate-600" />
+                         </div>
                       </div>
-                      <h4 className="text-lg font-black text-gray-400 uppercase tracking-tighter">Enter a topic to begin</h4>
+                      <div className="space-y-2">
+                        <h4 className="text-xl font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">Awaiting Command</h4>
+                        <p className="text-slate-400 dark:text-slate-600 text-sm font-medium">Input a topic to synthesize a scholarly manuscript.</p>
+                      </div>
                     </div>
                   )}
                 </CardBody>
