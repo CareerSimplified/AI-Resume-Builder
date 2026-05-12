@@ -59,18 +59,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // We still keep the listener for logout/login events in same tab
     if (isSupabaseConfigured()) {
-      const { data: authListener } = getSupabase().auth.onAuthStateChange((event) => {
-        console.log('[AuthContext] Auth event:', event)
-        if (event === 'SIGNED_OUT') {
-           setUser(null)
-           setLoading(false)
-        } else if (event === 'SIGNED_IN') {
-           refreshUser()
+      try {
+        const { data: authListener } = getSupabase().auth.onAuthStateChange((event) => {
+          console.log('[AuthContext] Auth event:', event)
+          if (event === 'SIGNED_OUT') {
+             setUser(null)
+             setLoading(false)
+          } else if (event === 'SIGNED_IN') {
+             refreshUser()
+          }
+        })
+        return () => {
+          clearTimeout(timeout)
+          authListener.subscription.unsubscribe()
         }
-      })
-      return () => {
-        clearTimeout(timeout)
-        authListener.subscription.unsubscribe()
+      } catch (err) {
+        console.warn('[AuthContext] Could not set up auth listener:', err)
       }
     }
 

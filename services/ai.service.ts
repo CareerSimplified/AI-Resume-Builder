@@ -247,7 +247,7 @@ export const aiService = {
       if (jobDescription) console.log(`[aiService] JD provided, length: ${jobDescription.length}`);
 
       if (mode === 'MBA_POLISH') {
-        const systemPrompt = "You are a premium resume optimization engine for MBA consulting and high-tier corporate roles. You must return ONLY a valid JSON object.";
+        const systemPrompt = "You are a premium resume optimization engine. You must return ONLY a valid JSON object. Every analysis must be 100% unique and strictly tailored to the specific text provided. Avoid generic templates.";
         const userPrompt = `Analyze this resume for MBA-level formatting and polish.
 Focus on: Action verbs, metrics (quantification), STAR structure, and consulting-style language.
 Target standard: ${targetStandard || 'Auto Detect'}
@@ -257,38 +257,33 @@ ${RESUME_REWRITE_RULES}
 RESUME:
 ${resumeText}
 
-Return exactly this JSON structure with real data populated:
+Return exactly this JSON structure with real data populated (do not use example values):
 {
-  "match_score": { "score": 85, "alignment": 0, "quantification": 25, "keywords": 15, "structure": 15, "formatting": 15, "impact": 15 },
-  "ats_score": 88,
-  "strengths": ["Strong use of action verbs", "Clear chronological structure"],
-  "weaknesses": ["Lack of specific metrics in recent roles"],
-  "missing_skills": ["Tableau", "SQL"],
-  "suggestions": ["Add % or $ values to achievements"],
-  "qualityVerdict": {
-    "rating": "moderate",
-    "issues": ["Bullets are task-heavy and impact-light"],
-    "improvementsMade": ["Reframed bullets with action + outcome structure", "Standardized section headers", "Applied impact-first narration"]
-  },
-  "rewrittenResume": "A full, professional version of the resume rewritten in executive consulting style...",
+  "match_score": { "score": "[CALCULATED_SCORE]", "alignment": 0, "quantification": "[SCORE]", "keywords": "[SCORE]", "structure": "[SCORE]", "formatting": "[SCORE]", "impact": "[SCORE]" },
+  "ats_score": "[CALCULATED_ATS_SCORE]",
+  "strengths": ["[STRENGTH_1]", "[STRENGTH_2]"],
+  "weaknesses": ["[WEAKNESS_1]"],
+  "missing_skills": ["[SKILL_1]", "[SKILL_2]"],
+  "suggestions": ["[SUGGESTION_1]"],
+  "rewrittenResume": "[FULL_REWRITTEN_TEXT_HERE]",
   "rewrittenResumeData": {
-    "header": { "name": "...", "email": "...", "phone": "...", "location": "...", "links": ["LinkedIn: ...", "Portfolio: ..."] },
-    "summary": "...",
+    "header": { "name": "[NAME]", "email": "[EMAIL]", "phone": "[PHONE]", "location": "[LOCATION]", "links": ["[LINK_1]"] },
+    "summary": "[PROFESSIONAL_SUMMARY]",
     "sections": [
       { 
         "title": "EXPERIENCE", 
         "items": [ 
-          { "company": "...", "role": "...", "dates": "...", "location": "...", "bullets": ["Accomplished X..."] } 
+          { "company": "[COMPANY]", "role": "[ROLE]", "dates": "[DATES]", "location": "[LOCATION]", "bullets": ["[BULLET_1]"] } 
         ] 
       },
-      { "title": "EDUCATION", "items": [ { "institution": "...", "degree": "...", "dates": "...", "location": "...", "details": "..." } ] },
-      { "title": "PROJECTS", "items": [ { "name": "...", "technologies": "...", "bullets": ["..."] } ] },
-      { "title": "SKILLS", "items": [ { "category": "...", "skills": ["..."] } ] }
+      { "title": "EDUCATION", "items": [ { "institution": "[INSTITUTION]", "degree": "[DEGREE]", "dates": "[DATES]", "location": "[LOCATION]", "details": "[DETAILS]" } ] },
+      { "title": "PROJECTS", "items": [ { "name": "[PROJECT]", "technologies": "[TECH]", "bullets": ["[BULLET]"] } ] },
+      { "title": "SKILLS", "items": [ { "category": "[CATEGORY]", "skills": ["[SKILL]"] } ] }
     ]
   }
 }`;
 
-        // Fire all MBA tasks in parallel: resume rewrite + cover letter + interview prep
+        // Fire all MBA tasks in parallel: resume rewrite + cover letter + interview prep + career plan
         const mbaTasks = [
           callAI(systemPrompt, userPrompt).then(res => ({ type: 'main', data: parseJSON(res) })),
           callAI(
@@ -297,14 +292,21 @@ Return exactly this JSON structure with real data populated:
           ).then(res => ({ type: 'cover', data: parseJSON(res) })),
           callAI(
             "You are a senior interview coach. Return ONLY valid JSON.",
-            `Based on this resume, generate exactly 15 likely interview questions with detailed STAR-format answers. Include a mix of behavioral, technical, and situational questions.\n\nRESUME:\n${resumeText}\n\nReturn JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`
-          ).then(res => ({ type: 'interview', data: parseJSON(res) }))
+            `Based on this resume, generate EXACTLY 15 high-stakes interview questions with detailed STAR-format answers. Include a mix of behavioral, technical, and situational questions. You MUST return exactly 15 items.\n\nRESUME:\n${resumeText}\n\nReturn JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`
+          ).then(res => ({ type: 'interview', data: parseJSON(res) })),
+          callAI(
+            "You are a strategic career advisor. Return ONLY valid JSON.",
+            `Generate a high-impact 30/60/90 day onboarding and success plan for this candidate based on their resume profile. 
+             Focus on: Learning, Quick Wins, and Long-term Value.
+             Return JSON: {"plan": "### 30 Days: Learning & Integration\\n- ...\\n\\n### 60 Days: Execution & Quick Wins\\n- ...\\n\\n### 90 Days: Ownership & Strategy\\n- ..."}`
+          ).then(res => ({ type: 'plan', data: parseJSON(res) }))
         ];
 
         const mbaResults = await Promise.all(mbaTasks);
         const mainData = mbaResults.find(r => r.type === 'main')?.data;
         const coverData = mbaResults.find(r => r.type === 'cover')?.data;
         const interviewData = mbaResults.find(r => r.type === 'interview')?.data;
+        const planData = mbaResults.find(r => r.type === 'plan')?.data;
 
         if (!mainData) throw new Error("Failed to parse MBA Polish JSON");
 
@@ -320,101 +322,95 @@ Return exactly this JSON structure with real data populated:
           rewrittenResumeData: mainData.rewrittenResumeData,
           coverLetter: coverData?.coverLetter || "Cover letter generation failed. Please try again.",
           interviewPrep: interviewData?.questions ? JSON.stringify(interviewData.questions) : "Interview prep generation failed.",
+          plan306090: planData?.plan || planData || "Career plan generation failed.",
           gaps: { missing_skills: [], missing_frameworks: [], missing_keywords: [], missing_metrics: [], missing_leadership: [] }
         };
       } else {
-        // Mode 2: JD_ALIGNMENT - Promises.all
+        // Mode 2: JD_ALIGNMENT
         const baseSystemPrompt = "You are an expert ATS optimization engine. Return ONLY valid JSON.";
-
         const tasks = [];
 
-        // 1. Resume rewrite (Free & Pro)
+        // 1. Resume rewrite
         tasks.push(
-          callAI(baseSystemPrompt, `Rewrite this resume to closely align with the provided Job Description.
+          callAI(baseSystemPrompt, `You are a high-precision career engineer. Your task is to BIND the following Resume and Job Description together into a perfectly tailored professional document.
+          
 ${RESUME_REWRITE_RULES}
+
+STRICT ALIGNMENT RULES:
+- Identify key technical skills and soft skills in the JD and ensure they are woven naturally into the resume's experience and skills sections.
+- Rephrase achievement bullets to use the industry-specific terminology found in the JD.
+- Mirror the 'voice' and priority of the company specified in the JD.
+- Ensure the Professional Summary directly addresses the core requirements of the role.
+
 RESUME:
 ${resumeText}
+
 JD:
 ${jobDescription}
+
 Return JSON: {
   "rewrittenResume": "Full document text...",
-  "rewrittenResumeData": {
-    "header": { "name": "...", "email": "...", "phone": "...", "location": "...", "links": ["LinkedIn: ..."] },
-    "summary": "...",
-    "sections": [
-      { "title": "EXPERIENCE", "items": [ { "company": "...", "role": "...", "dates": "...", "location": "...", "bullets": ["..."] } ] },
-      { "title": "EDUCATION", "items": [ { "institution": "...", "degree": "...", "dates": "...", "location": "...", "details": "..." } ] },
-      { "title": "PROJECTS", "items": [ { "name": "...", "technologies": "...", "bullets": ["..."] } ] },
-      { "title": "SKILLS", "items": [ { "category": "...", "skills": ["..."] } ] }
-    ]
-  }
-}`)
-            .then(res => ({ type: 'rewrite', data: parseJSON(res) }))
+  "rewrittenResumeData": { ... }
+}`).then(res => ({ type: 'rewrite', data: parseJSON(res) }))
         );
 
-        // 2. Match score (Free & Pro)
+        // 2. Match score
         tasks.push(
           callAI(baseSystemPrompt, `Analyze this resume against the JD and compute a match score out of 100.
-RESUME:
-${resumeText}
-JD:
-${jobDescription}
-Return JSON: {
-  "match_score": { "score": 85, "alignment": 30, "quantification": 20, "keywords": 20, "structure": 15 },
-  "ats_score": 80,
-  "gaps": {
-    "missing_skills": ["AWS", "Docker"],
-    "missing_frameworks": [],
-    "missing_keywords": ["Scalability"],
-    "missing_metrics": ["Cloud cost reduction %"],
-    "missing_leadership": ["Direct reports"]
-  }
+RESUME: ${resumeText}
+JD: ${jobDescription}
+Return JSON: { 
+  "match_score": { "score": "[CALCULATED]", "alignment": "[CALCULATED]", "quantification": "[CALCULATED]", "keywords": "[CALCULATED]", "structure": "[CALCULATED]" }, 
+  "ats_score": "[CALCULATED]", 
+  "gaps": { 
+    "missing_skills": ["[SKILL_1]", "[SKILL_2]"], 
+    "missing_frameworks": [], 
+    "missing_keywords": ["[KEYWORD_1]"], 
+    "missing_metrics": ["[METRIC_HINT]"], 
+    "missing_leadership": [] 
+  } 
 }`)
             .then(res => ({ type: 'score', data: parseJSON(res) }))
         );
 
-        // 3. Keyword analysis (All users)
+        // 3. Keyword analysis
         tasks.push(
-          callAI(baseSystemPrompt, `Extract specific strengths, weaknesses, missing skills, and actionable suggestions by comparing resume to JD.
-RESUME:
-${resumeText}
-JD:
-${jobDescription}
-Return JSON: {"strengths": ["specific strength 1"], "weaknesses": ["specific weakness 1"], "missing_skills": ["Skill1", "Skill2"], "suggestions": ["actionable suggestion 1"]}`)
+          callAI(baseSystemPrompt, `Extract strengths, weaknesses, missing skills, and suggestions.
+RESUME: ${resumeText}
+JD: ${jobDescription}
+Return JSON: {"strengths": [...], "weaknesses": [...], "missing_skills": [...], "suggestions": [...]}`)
             .then(res => ({ type: 'keywords', data: parseJSON(res) }))
         );
 
-        // 4. Cover Letter (All users)
+        // 4. Cover Letter
         tasks.push(
-          callAI(
-            "You are a professional career coach writing cover letters. Return ONLY valid JSON.",
-            `Write a professional, compelling cover letter specifically tailored to this JD using the candidate's resume. 3-4 paragraphs, highlight relevant experience.
-RESUME:
-${resumeText}
-JD:
-${jobDescription}
-Return JSON: {"coverLetter": "Dear Hiring Manager,\\n\\n[Full professional cover letter]\\n\\nSincerely,\\n[Candidate Name]"}`
-          ).then(res => ({ type: 'coverLetter', data: parseJSON(res) }))
+          callAI("You are a professional career coach. Return ONLY valid JSON.",
+            `Write a tailored cover letter for this JD.
+RESUME: ${resumeText}
+JD: ${jobDescription}
+Return JSON: {"coverLetter": "..."}`).then(res => ({ type: 'coverLetter', data: parseJSON(res) }))
         );
 
-        // 5. Interview Prep - 15 Q&A (All users)
+        // 5. Interview Prep - 15 Q&A
         tasks.push(
-          callAI(
-            "You are a senior interview coach. Return ONLY valid JSON.",
-            `Based on this resume and job description, generate exactly 15 interview questions the hiring manager will most likely ask. For each question, provide a detailed STAR-format answer using the candidate's actual experience. Mix: 5 behavioral, 5 technical, 5 situational.
+          callAI("You are a senior interview coach. Return ONLY valid JSON.",
+            `Generate EXACTLY 15 interview questions and STAR answers for this JD.
+RESUME: ${resumeText}
+JD: ${jobDescription}
+Return JSON: {"questions": [...]}`).then(res => ({ type: 'interview', data: parseJSON(res) }))
+        );
 
-RESUME:
-${resumeText}
-JD:
-${jobDescription}
-
-Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "Tell me about a time...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`
-          ).then(res => ({ type: 'interview', data: parseJSON(res) }))
+        // 6. 30/60/90 Day Plan
+        tasks.push(
+          callAI("You are a strategic onboarding expert. Return ONLY valid JSON.",
+            `Generate a 30/60/90 day success plan for this specific role and candidate.
+RESUME: ${resumeText}
+JD: ${jobDescription}
+Return JSON: {"plan": "..."}`).then(res => ({ type: 'plan', data: parseJSON(res) }))
         );
 
         const results = await Promise.all(tasks);
 
-        // Merge into ReportAnalysis
         let analysis: ReportAnalysis = {
           match_score: { score: 60, alignment: 20, quantification: 15, keywords: 15, structure: 10 },
           ats_score: 75,
@@ -424,8 +420,9 @@ Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "Tell me
           suggestions: [],
           rewrittenResume: "",
           rewrittenResumeData: null,
-          coverLetter: "Cover letter generation failed. Please try again.",
-          interviewPrep: "Interview prep generation failed. Please try again.",
+          coverLetter: "",
+          interviewPrep: "",
+          plan306090: "",
           gaps: { missing_skills: [], missing_frameworks: [], missing_keywords: [], missing_metrics: [], missing_leadership: [] }
         };
 
@@ -434,27 +431,21 @@ Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "Tell me
             analysis.rewrittenResume = normalizeRewrittenResume(r.data.rewrittenResume);
             analysis.rewrittenResumeData = r.data.rewrittenResumeData;
           }
-
           if (r.type === 'score' && r.data) {
             if (r.data.match_score) analysis.match_score = r.data.match_score;
             if (r.data.ats_score) analysis.ats_score = r.data.ats_score;
             if (r.data.gaps) analysis.gaps = { ...analysis.gaps, ...r.data.gaps };
           }
-
           if (r.type === 'keywords' && r.data) {
             analysis.strengths = r.data.strengths || [];
             analysis.weaknesses = r.data.weaknesses || [];
             analysis.missing_skills = r.data.missing_skills || [];
             analysis.suggestions = r.data.suggestions || [];
           }
-
           if (r.type === 'coverLetter' && r.data?.coverLetter) analysis.coverLetter = r.data.coverLetter;
-          if (r.type === 'interview' && r.data) {
-            if (r.data.questions && Array.isArray(r.data.questions)) {
-              analysis.interviewPrep = JSON.stringify(r.data.questions);
-            } else if (r.data.interviewPrep) {
-              analysis.interviewPrep = typeof r.data.interviewPrep === 'string' ? r.data.interviewPrep : JSON.stringify(r.data.interviewPrep);
-            }
+          if (r.type === 'interview' && r.data?.questions) analysis.interviewPrep = JSON.stringify(r.data.questions);
+          if (r.type === 'plan' && r.data) {
+            analysis.plan306090 = r.data.plan || r.data;
           }
         }
 
@@ -509,5 +500,23 @@ Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "Tell me
       rewrittenResume: resumeText, // Fallback to original
       rewrittenResumeData: null // ResumePreview handles null
     };
+  },
+
+  async generateEssay(question: string, promptType: string): Promise<string> {
+    const systemPrompt = "You are a professional essay writer and academic advisor. Generate a high-quality, structured essay based on the user's question and selected prompt style. Return the essay in Markdown format.";
+    const userPrompt = `
+      Question/Topic: ${question}
+      Style/Prompt: ${promptType}
+      
+      Please write a comprehensive essay that is well-researched, insightful, and professionally formatted.
+    `;
+    
+    try {
+      const response = await callAI(systemPrompt, userPrompt, false);
+      return response;
+    } catch (error) {
+      console.error("[aiService] Essay generation failed:", error);
+      throw new Error("Failed to generate essay. Please try again.");
+    }
   }
 };

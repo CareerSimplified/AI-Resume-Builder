@@ -1,21 +1,18 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  // Turbopack aliasing
-  // @ts-ignore
-  turbo: {
+  // Turbopack config (default bundler in Next.js 16)
+  turbopack: {
     resolveAlias: {
-      canvas: path.resolve(__dirname, 'empty.js'),
+      canvas: { browser: '' },
+      'node-canvas': { browser: '' },
     },
   },
-  // @ts-ignore
-  turbopack: {},
   experimental: {
     // Other experimental features would go here
   },
 
-  // Webpack aliasing
+  // Webpack aliasing (fallback when using --webpack flag)
   // @ts-ignore
   webpack: (config: any, { isServer }: any) => {
     if (isServer) {
@@ -31,3 +28,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

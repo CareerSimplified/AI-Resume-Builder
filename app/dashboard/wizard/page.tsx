@@ -315,7 +315,18 @@ export default function WizardPage() {
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3">JD Alignment</h3>
                     <p className="text-gray-500 dark:text-gray-400 font-medium mb-5 sm:mb-6 text-sm sm:text-base leading-relaxed">Tailor your resume for a specific job description. High-precision keyword matching and skill gap analysis.</p>
-                    <Button variant={mode === 'JD_ALIGNMENT' ? 'primary' : 'outline'} fullWidth className="h-12 sm:h-14 rounded-xl font-bold">Select Mode</Button>
+                    <Button 
+                        variant={mode === 'JD_ALIGNMENT' ? 'primary' : 'outline'} 
+                        fullWidth 
+                        className="h-12 sm:h-14 rounded-xl font-bold"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setMode('JD_ALIGNMENT');
+                            setStep('UPLOAD');
+                        }}
+                    >
+                        Select Mode
+                    </Button>
                 </div>
 
                 <div
@@ -331,15 +342,22 @@ export default function WizardPage() {
                     </div>
                     <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3">MBA Format Polish</h3>
                     <p className="text-gray-500 dark:text-gray-400 font-medium mb-5 sm:mb-6 text-sm sm:text-base leading-relaxed">Standardize your resume for elite business school applications. Impact-first narration and quantifiable metrics.</p>
-                    <Button variant={mode === 'MBA_POLISH' ? 'primary' : 'outline'} fullWidth className="h-12 sm:h-14 rounded-xl font-bold">Select Mode</Button>
+                    <Button 
+                        variant={mode === 'MBA_POLISH' ? 'primary' : 'outline'} 
+                        fullWidth 
+                        className="h-12 sm:h-14 rounded-xl font-bold"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setMode('MBA_POLISH');
+                            setStep('UPLOAD');
+                        }}
+                    >
+                        Select Mode
+                    </Button>
                 </div>
             </div>
 
-            <div className="mt-10 sm:mt-14 text-center">
-                <Button size="lg" className="h-14 sm:h-16 px-10 sm:px-14 rounded-2xl font-black text-lg sm:text-xl text-white shadow-2xl shadow-indigo-500/25 border-none" onClick={() => setStep('UPLOAD')}>
-                    Continue <ArrowRight className="ml-2 w-5 h-5 sm:w-6 sm:h-6" />
-                </Button>
-            </div>
+
         </div>
     )
 

@@ -26,6 +26,7 @@ export interface SidebarItem {
 export const userSidebarItems: SidebarItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: Home },
   { label: 'Resume AI', href: '/dashboard/wizard', icon: Plus },
+  { label: 'AI Essay', href: '/dashboard/essay', icon: FileText },
   { label: 'My Resumes', href: '/dashboard/my-resumes', icon: FileSearch },
   { label: 'Reports', href: '/dashboard/reports', icon: BarChart3 },
   { label: 'Profile', href: '/dashboard/profile', icon: User },

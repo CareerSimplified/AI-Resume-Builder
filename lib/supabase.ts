@@ -2,6 +2,22 @@ import { createBrowserClient } from '@supabase/ssr'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 
+// Resilient fetch wrapper — catches network errors to prevent unhandled rejections
+const resilientFetch: typeof fetch = async (input, init) => {
+  try {
+    return await fetch(input, init)
+  } catch (err) {
+    // Network unreachable / Supabase project paused
+    console.warn('[Supabase] Network request failed (project may be paused):', 
+      typeof input === 'string' ? input : (input as Request)?.url)
+    // Return a synthetic error response so the SDK handles it gracefully
+    return new Response(
+      JSON.stringify({ message: 'Network request failed', error: 'fetch_error' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+}
+
 // Function to create or get the Supabase client - perfectly lazy
 export function getSupabase(): SupabaseClient<Database> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -22,8 +38,12 @@ export function getSupabase(): SupabaseClient<Database> {
     })
   }
 
-  // Create client (Next.js createBrowserClient handles the window/singleton check for us)
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+  // Create client with resilient fetch to handle unreachable Supabase gracefully
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    global: {
+      fetch: resilientFetch,
+    },
+  })
 }
 
 // Named export for convenience - THIS IS NOW A FUNCTION CALL
@@ -33,3 +53,4 @@ export const supabase = getSupabase()
 export const isSupabaseConfigured = () => {
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 }
+
