@@ -97,10 +97,10 @@ const downloadPdf = async () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-950 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 md:p-12 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 bg-slate-50 dark:bg-[#020617]">
         <div 
           ref={resumeRef}
-          className="bg-white text-slate-900 p-[1in] shadow-2xl mx-auto w-[8.5in] font-serif border border-gray-100"
+          className="bg-white text-slate-900 p-6 sm:p-12 md:p-[0.75in] lg:p-[1in] shadow-2xl mx-auto w-full max-w-[8.5in] font-serif border border-gray-100 min-h-[11in]"
           style={{ 
             color: '#1a202c',
             backgroundColor: '#ffffff',

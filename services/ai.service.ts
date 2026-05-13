@@ -348,9 +348,25 @@ ${resumeText}
 JD:
 ${jobDescription}
 
-Return JSON: {
-  "rewrittenResume": "Full document text...",
-  "rewrittenResumeData": { ... }
+Return EXACTLY this JSON structure (do not use example values):
+{
+  "rewrittenResume": "Full document plain text...",
+  "rewrittenResumeData": {
+    "header": { "name": "[NAME]", "email": "[EMAIL]", "phone": "[PHONE]", "location": "[LOCATION]", "links": ["[LINK_1]"] },
+    "summary": "[PROFESSIONAL_SUMMARY]",
+    "sections": [
+      { 
+        "title": "EXPERIENCE", 
+        "items": [ 
+          { "company": "[COMPANY]", "role": "[ROLE]", "dates": "[DATES]", "location": "[LOCATION]", "bullets": ["[BULLET_1]"] } 
+        ] 
+      },
+      { "title": "EDUCATION", "items": [ { "institution": "[INSTITUTION]", "degree": "[DEGREE]", "dates": "[DATES]", "location": "[LOCATION]", "details": "[DETAILS]" } ] },
+      { "title": "PROJECTS", "items": [ { "name": "[PROJECT]", "technologies": "[TECH]", "bullets": ["[BULLET]"] } ] },
+      { "title": "SKILLS", "items": [ { "category": "[CATEGORY]", "skills": ["[SKILL]"] } ] },
+      { "title": "LEADERSHIP & ACTIVITIES", "items": [ { "name": "[ACTIVITY]", "role": "[ROLE]", "bullets": ["[BULLET]"] } ] }
+    ]
+  }
 }`).then(res => ({ type: 'rewrite', data: parseJSON(res) }))
         );
 
@@ -394,10 +410,18 @@ Return JSON: {"coverLetter": "..."}`).then(res => ({ type: 'coverLetter', data: 
         // 5. Interview Prep - 15 Q&A
         tasks.push(
           callAI("You are a senior interview coach. Return ONLY valid JSON.",
-            `Generate EXACTLY 15 interview questions and STAR answers for this JD.
+            `Based on this resume and target JD, generate EXACTLY 15 high-stakes interview questions with detailed STAR-format answers. 
+            Include a mix of:
+            - Behavioral (Tell me about a time...)
+            - Technical/Domain-specific (How would you handle...)
+            - Strategic/Situational (Imagine if...)
+            
+            You MUST return exactly 15 items.
+            
 RESUME: ${resumeText}
 JD: ${jobDescription}
-Return JSON: {"questions": [...]}`).then(res => ({ type: 'interview', data: parseJSON(res) }))
+
+Return JSON: {"questions": [{"id": 1, "type": "behavioral", "question": "...", "answer": "Situation: ... Task: ... Action: ... Result: ..."}, ...15 total items]}`).then(res => ({ type: 'interview', data: parseJSON(res) }))
         );
 
         // 6. 30/60/90 Day Plan
@@ -502,13 +526,44 @@ Return JSON: {"plan": "..."}`).then(res => ({ type: 'plan', data: parseJSON(res)
     };
   },
 
-  async generateEssay(question: string, promptType: string): Promise<string> {
-    const systemPrompt = "You are a professional essay writer and academic advisor. Generate a high-quality, structured essay based on the user's question and selected prompt style. Return the essay in Markdown format.";
+  async generateEssayQuestions(topic: string): Promise<string[]> {
+    const systemPrompt = "You are an expert academic interviewer. Your goal is to ask 15 deep, insightful questions to help a student clarify their thoughts for a high-quality essay. Return ONLY a valid JSON array of 15 strings.";
+    const userPrompt = `The essay topic is: "${topic}". Generate 15 questions that will help the student provide specific details, examples, and personal insights for their essay.`;
+    
+    try {
+      const response = await callAI(systemPrompt, userPrompt, true);
+      const questions = parseJSON(response);
+      return Array.isArray(questions) ? questions : [];
+    } catch (error) {
+      console.error("[aiService] Question generation failed:", error);
+      return [];
+    }
+  },
+
+  async generateEssayPrompts(topic: string, answers: { question: string, answer: string }[]): Promise<{ id: string, title: string, description: string }[]> {
+    const systemPrompt = "You are a professional essay consultant. Based on a topic and a user's detailed answers, generate 3 unique and compelling essay prompts/titles. Return ONLY a valid JSON array of 3 objects with keys: id, title, description.";
+    const userPrompt = `Topic: ${topic}\n\nUser Answers:\n${answers.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n')}\n\nGenerate 3 distinct essay prompts that the user could choose from.`;
+    
+    try {
+      const response = await callAI(systemPrompt, userPrompt, true);
+      const prompts = parseJSON(response);
+      return Array.isArray(prompts) ? prompts : [];
+    } catch (error) {
+      console.error("[aiService] Prompt generation failed:", error);
+      return [];
+    }
+  },
+
+  async generateEssay(topic: string, selectedPrompt: string, answers: { question: string, answer: string }[]): Promise<string> {
+    const systemPrompt = "You are a world-class essay writer. Use the provided topic, selected prompt, and the user's detailed answers to write a masterpiece essay. Return the essay in Markdown format.";
     const userPrompt = `
-      Question/Topic: ${question}
-      Style/Prompt: ${promptType}
+      Topic: ${topic}
+      Selected Prompt: ${selectedPrompt}
       
-      Please write a comprehensive essay that is well-researched, insightful, and professionally formatted.
+      User's Detailed Insights:
+      ${answers.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n')}
+      
+      Please write a comprehensive, well-structured, and deeply insightful essay (approx 1000-1500 words). Use academic yet accessible language.
     `;
     
     try {

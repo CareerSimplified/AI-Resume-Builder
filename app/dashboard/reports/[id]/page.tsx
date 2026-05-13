@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Home, FileText, Plus, BarChart3, Settings, ArrowLeft, Copy, Download, CheckCircle, AlertCircle, Sparkles, Wand2, Lightbulb, FileDown } from 'lucide-react'
+import { Home, FileText, Plus, BarChart3, Settings, ArrowLeft, Copy, Download, CheckCircle, AlertCircle, Sparkles, Wand2, Lightbulb, FileDown, HelpCircle, Target } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody, CardHeader } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { Badge, ProgressBar } from '@/components/ui'
+import { Badge } from '@/components/ui'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
-import { reportService, resumeService } from '@/services/database.service'
+// Service imports if needed in future
+// import { reportService, resumeService } from '@/services/database.service'
 import { Report, Resume } from '@/types'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -27,7 +28,7 @@ export default function ReportDetailPage() {
   const [report, setReport] = useState<Report | null>(null)
   const [resume, setResume] = useState<Resume | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'RESUME' | 'SUITE' | 'GAPS'>('OVERVIEW')
+  const [activeTab, setActiveTab] = useState<'resume' | 'score' | 'gaps' | 'cover' | 'interview'>('resume')
   const [copiedSection, setCopiedSection] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,12 +47,12 @@ export default function ReportDetailPage() {
 
       if (reportData.success && reportData.data) {
         setReport(reportData.data)
-        
+
         // 2. Now fetch the associated resume using the report's resume_id
         const actualResumeId = reportData.data.resume_id
         const resumeRes = await fetch(`/api/resumes/${actualResumeId}`)
         const resumeData = await resumeRes.json()
-        
+
         if (resumeData.success && resumeData.data) {
           setResume(resumeData.data)
         }
@@ -68,9 +69,7 @@ export default function ReportDetailPage() {
 
   const copyToClipboard = (text: string, section: string) => {
     navigator.clipboard.writeText(text)
-    setCopiedSection(section)
     success(`${section} copied to clipboard!`)
-    setTimeout(() => setCopiedSection(null), 2000)
   }
 
   const handleDownloadResume = () => {
@@ -164,330 +163,225 @@ ${report.suggestions?.map((s, i) => `${i + 1}. ${s}`).join('\n') || 'None'}
 
   return (
     <DashboardLayout sidebarItems={sidebarItems}>
-      <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 pb-12 px-4 md:px-0">
-        {/* Navigation & Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="min-w-0">
-            <Link href="/dashboard/reports" className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2 mb-2 transition-all hover:gap-1">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Reports
-            </Link>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-              {report.mode === 'MBA_POLISH' ? 'MBA Executive Report' : 'JD Alignment Report'}
-              <Badge variant="primary" className="bg-blue-600/10 text-blue-600 border-none px-2 uppercase text-[10px]">
-                {report.mode || 'Standard'}
-              </Badge>
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2 font-medium">
-              <FileText className="w-4 h-4 text-blue-500" />
-              {resume.file_name}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <Button variant="outline" onClick={handleDownloadResume} size="sm" className="rounded-xl border-gray-200 dark:border-gray-800">
-              <FileDown className="w-4 h-4 mr-2" />
-              Original
-            </Button>
-            <Button variant="secondary" onClick={handleCopyAll} size="sm" className="rounded-xl">
-              <Copy className="w-4 h-4 mr-2" />
-              Copy All
-            </Button>
-            <Button onClick={() => window.print()} size="sm" className="rounded-xl shadow-lg shadow-blue-600/20">
-              <Download className="w-4 h-4 mr-2" />
-              PDF Export
-            </Button>
-          </div>
-        </div>
-
-        {/* Dynamic Tabs */}
-        <div className="flex space-x-1 overflow-x-auto pb-1 mb-2 scrollbar-hide border-b border-gray-200 dark:border-gray-800">
-            <button 
-                onClick={() => setActiveTab('OVERVIEW')} 
-                className={clsx(
-                    "flex items-center gap-2 px-6 py-4 font-bold rounded-t-2xl transition-all whitespace-nowrap",
-                    activeTab === 'OVERVIEW' 
-                        ? "bg-white dark:bg-gray-900 text-blue-600 border-b-2 border-blue-600" 
-                        : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                )}
-            >
-                <BarChart3 className="w-4 h-4" /> Overview
-            </button>
-            {report.rewritten_resume && (
-                <button 
-                    onClick={() => setActiveTab('RESUME')} 
-                    className={clsx(
-                        "flex items-center gap-2 px-6 py-4 font-bold rounded-t-2xl transition-all whitespace-nowrap",
-                        activeTab === 'RESUME' 
-                            ? "bg-white dark:bg-gray-900 text-blue-600 border-b-2 border-blue-600" 
-                            : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    )}
-                >
-                    <Wand2 className="w-4 h-4" /> AI-Enhanced Resume
-                </button>
-            )}
-            {(report.cover_letter || report.interview_prep) && (
-                <button 
-                    onClick={() => setActiveTab('SUITE')} 
-                    className={clsx(
-                        "flex items-center gap-2 px-6 py-4 font-bold rounded-t-2xl transition-all whitespace-nowrap",
-                        activeTab === 'SUITE' 
-                            ? "bg-white dark:bg-gray-900 text-blue-600 border-b-2 border-blue-600" 
-                            : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    )}
-                >
-                    <Sparkles className="w-4 h-4" /> Career Suite
-                </button>
-            )}
-            {report.gaps && (
-                <button 
-                    onClick={() => setActiveTab('GAPS')} 
-                    className={clsx(
-                        "flex items-center gap-2 px-6 py-4 font-bold rounded-t-2xl transition-all whitespace-nowrap",
-                        activeTab === 'GAPS' 
-                            ? "bg-white dark:bg-gray-900 text-blue-600 border-b-2 border-blue-600" 
-                            : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    )}
-                >
-                    <AlertCircle className="w-4 h-4" /> Gap Analysis
-                </button>
-            )}
-        </div>
-
-        {/* Tabs Content */}
-        <div className="bg-white dark:bg-gray-900 rounded-3xl p-4 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none min-h-[600px]">
-          
-          {/* TAB: OVERVIEW */}
-          {activeTab === 'OVERVIEW' && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {/* Global Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <Card className="bg-gray-50 dark:bg-gray-800/50 border-none overflow-hidden relative group">
-                        <CardBody className="p-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Match Accuracy</h3>
-                                    <p className="text-sm text-gray-500 font-medium">JD Alignment & Relevance</p>
-                                </div>
-                                <div className={clsx("text-4xl font-black", getScoreColor(report.match_score))}>
-                                    {report.match_score}%
-                                </div>
-                            </div>
-                            <ProgressBar value={report.match_score} color={getScoreBg(report.match_score)} height="h-3" />
-                        </CardBody>
-                    </Card>
-
-                    <Card className="bg-gray-50 dark:bg-gray-800/50 border-none overflow-hidden relative group">
-                        <CardBody className="p-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">ATS Compatibility</h3>
-                                    <p className="text-sm text-gray-500 font-medium">Readability & Structure</p>
-                                </div>
-                                <div className={clsx("text-4xl font-black", getScoreColor(report.ats_score))}>
-                                    {report.ats_score}%
-                                </div>
-                            </div>
-                            <ProgressBar value={report.ats_score} color={getScoreBg(report.ats_score)} height="h-3" />
-                        </CardBody>
-                    </Card>
-                </div>
-
-                {/* Grid Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <CheckCircle className="w-6 h-6 text-green-500" />
-                            <h3 className="text-2xl font-black tracking-tight">Key Strengths</h3>
-                        </div>
-                        <div className="space-y-4">
-                            {report.strengths?.map((item, i) => (
-                                <div key={i} className="flex gap-4 items-start p-5 bg-green-50/30 dark:bg-green-900/10 rounded-2xl border border-green-100/50 dark:border-green-900/30 group transition-all hover:bg-green-50/50">
-                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm">
-                                        {i + 1}
-                                    </span>
-                                    <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{item}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <Wand2 className="w-6 h-6 text-orange-500" />
-                            <h3 className="text-2xl font-black tracking-tight">Growth Areas</h3>
-                        </div>
-                        <div className="space-y-4">
-                            {report.weaknesses?.map((item, i) => (
-                                <div key={i} className="flex gap-4 items-start p-5 bg-orange-50/30 dark:bg-orange-900/10 rounded-2xl border border-orange-100/50 dark:border-orange-900/30 group transition-all hover:bg-orange-50/50">
-                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-sm italic">
-                                        !
-                                    </span>
-                                    <p className="text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{item}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <AlertCircle className="w-6 h-6 text-red-500" />
-                            <h3 className="text-2xl font-black tracking-tight">Missing Core Skills</h3>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
-                            {report.missing_skills?.map((skill, i) => (
-                                <span key={i} className="px-4 py-2 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl font-bold border border-red-100 dark:border-red-900/30">
-                                    {skill}
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-
-                    <section className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <Lightbulb className="w-6 h-6 text-blue-500" />
-                            <h3 className="text-2xl font-black tracking-tight">Actionable Advice</h3>
-                        </div>
-                        <div className="space-y-3">
-                            {report.suggestions?.map((item, i) => (
-                                <div key={i} className="p-4 bg-blue-50/20 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 font-medium text-sm text-gray-600 dark:text-gray-400 italic">
-                                    {item}
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#020617] p-4 sm:p-6 md:p-10 lg:p-16 font-sans selection:bg-indigo-500/30">
+        <div className="max-w-6xl mx-auto space-y-8">
+          {/* Navigation & Actions */}
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="space-y-2">
+              <Link href="/dashboard/reports" className="text-indigo-600 hover:text-indigo-700 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-4 group transition-all">
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+                Back to History
+              </Link>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-tight">
+                {report.mode === 'MBA_POLISH' ? 'Executive Report' : 'JD Alignment'}
+              </h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 border-none px-3 py-1 uppercase text-[10px] font-black">
+                  {report.mode || 'Standard'}
+                </Badge>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-xs flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-indigo-500" />
+                  {resume.file_name}
+                </p>
+              </div>
             </div>
-          )}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleDownloadResume} className="h-12 rounded-xl border-2 font-black text-xs">
+                <FileDown className="w-4 h-4 mr-2" /> Original
+              </Button>
+              <Button variant="secondary" onClick={handleCopyAll} className="h-12 rounded-xl font-black text-xs">
+                <Copy className="w-4 h-4 mr-2" /> Copy All
+              </Button>
+              <Button onClick={() => window.print()} className="h-12 rounded-xl font-black text-xs bg-slate-900 shadow-xl shadow-slate-900/20">
+                <Download className="w-4 h-4 mr-2" /> Export
+              </Button>
+            </div>
+          </div>
 
-          {/* TAB: AI-ENHANCED RESUME */}
-          {activeTab === 'RESUME' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-blue-500" />
-                        AI-Improved Resume
-                    </h3>
-                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(report.rewritten_resume || '', 'Resume')}>
-                        <Copy className="w-4 h-4 mr-2" /> Copy Markdown
-                    </Button>
-                </div>
-                <div className="bg-gray-50 dark:bg-[#0b0f1a] p-6 sm:p-10 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-inner max-h-[1000px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-800">
-                    <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-800 dark:text-gray-300">
-                        {report.rewritten_resume}
+          {/* Dynamic Tabs */}
+          <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-900 rounded-[1.5rem] overflow-x-auto scrollbar-hide">
+            {[
+              { id: 'resume', label: 'AI Resume', icon: FileText },
+              { id: 'score', label: 'Score', icon: BarChart3 },
+              { id: 'gaps', label: 'Gaps', icon: Target },
+              { id: 'cover', label: 'Cover Letter', icon: Sparkles, condition: !!report.cover_letter },
+              { id: 'interview', label: 'Interview Prep', icon: HelpCircle, condition: !!report.interview_prep },
+            ].map(tab => (
+              (!('condition' in tab) || tab.condition) && (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={clsx(
+                    "flex items-center gap-2.5 px-6 py-3.5 font-black rounded-[1.25rem] transition-all whitespace-nowrap text-[11px] uppercase tracking-widest",
+                    activeTab === tab.id
+                      ? "bg-white dark:bg-slate-800 text-indigo-600 shadow-xl shadow-slate-200 dark:shadow-none"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  )}
+                >
+                  <tab.icon className="w-4 h-4" /> {tab.label}
+                </button>
+              )
+            ))}
+          </div>
+
+          {/* Tabs Content */}
+          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 lg:p-16 border border-white/20 shadow-2xl min-h-[600px]">
+
+            {/* TAB: RESUME */}
+            {activeTab === 'resume' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b dark:border-slate-800 pb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600">
+                      <Wand2 className="w-6 h-6" />
                     </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">AI-Optimized Version</h3>
+                      <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Re-engineered for peak ATS performance</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" className="rounded-xl font-black px-6 flex-1 sm:flex-none h-12 border-2" onClick={() => copyToClipboard(report.rewritten_resume || '', 'Resume')}>
+                      <Copy className="w-4 h-4 mr-2" /> Copy
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                    <AlertCircle className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
-                        This version follows the <b>MBA / XYZ Structure</b> (Accomplished X, as measured by Y, by doing Z).
-                    </p>
+
+                <div className="bg-slate-50 dark:bg-[#0b0f1a] rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden">
+                  <div className="p-8 sm:p-12 md:p-16 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-serif min-h-[800px]">
+                    <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
+                      {report.rewritten_resume || "No rewritten version available for this report."}
+                    </div>
+                  </div>
                 </div>
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* TAB: CAREER SUITE */}
-          {activeTab === 'SUITE' && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                {report.cover_letter && (
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                                <FileText className="w-5 h-5 text-purple-500" />
-                                Tailored Cover Letter
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(report.cover_letter || '', 'Cover Letter')}>
-                                <Copy className="w-4 h-4" />
-                            </Button>
-                        </div>
-                        <div className="bg-purple-50/20 dark:bg-purple-950/10 p-6 rounded-2xl border border-purple-100 dark:border-purple-900/30 whitespace-pre-wrap text-sm leading-relaxed font-medium text-gray-700 dark:text-gray-300">
-                            {report.cover_letter}
-                        </div>
-                    </section>
-                )}
+            {/* TAB: SCORE */}
+            {activeTab === 'score' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <Card className="border-none shadow-2xl rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center bg-slate-50 dark:bg-slate-800/20">
+                  <div className="relative w-48 h-48 flex items-center justify-center mb-8">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-200 dark:text-slate-800" />
+                      <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray="552.6" strokeDashoffset={552.6 - (552.6 * (report.match_score || 0) / 100)} className="text-indigo-600 transition-all duration-1000" />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                      <span className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter">{report.match_score}</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Score</span>
+                    </div>
+                  </div>
+                  <h3 className={clsx("text-3xl font-black mb-2 tracking-tight", getScoreColor(report.match_score))}>
+                    {report.match_score >= 80 ? 'Exceptional' : report.match_score >= 60 ? 'Strong Match' : 'Optimization Needed'}
+                  </h3>
+                  <p className="text-slate-500 font-medium">Your resume's overall alignment with the target requirements.</p>
+                </Card>
 
-                {report.interview_prep && (
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                                <Home className="w-5 h-5 text-amber-500" />
-                                Interview Preparation Guide
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(JSON.stringify(report.interview_prep), 'Interview Prep')}>
-                                <Copy className="w-4 h-4" />
-                            </Button>
+                <div className="space-y-8">
+                  <section className="space-y-4">
+                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Actionable Suggestions</h4>
+                    <div className="space-y-3">
+                      {report.suggestions?.map((s, i) => (
+                        <div key={i} className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-start gap-3">
+                          <div className="w-5 h-5 rounded-full bg-indigo-500 text-white flex-shrink-0 flex items-center justify-center text-[10px] mt-0.5">!</div>
+                          <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{s}</p>
                         </div>
-                        <div className="bg-amber-50/20 dark:bg-amber-950/10 p-6 rounded-2xl border border-amber-100 dark:border-amber-900/30 text-sm leading-relaxed font-medium text-gray-700 dark:text-gray-300">
-                             {typeof report.interview_prep === 'string' ? report.interview_prep : JSON.stringify(report.interview_prep, null, 2)}
-                        </div>
-                    </section>
-                )}
-
-                {report.plan_306090 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                                <BarChart3 className="w-5 h-5 text-blue-500" />
-                                30-60-90 Day Strategy
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(report.plan_306090 || '', 'Plan')}>
-                                <Copy className="w-4 h-4" />
-                            </Button>
-                        </div>
-                        <div className="bg-blue-50/20 dark:bg-blue-950/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 whitespace-pre-wrap text-sm leading-relaxed font-medium text-gray-700 dark:text-gray-300">
-                            {report.plan_306090}
-                        </div>
-                    </section>
-                )}
-            </div>
-          )}
-
-          {/* TAB: GAP ANALYSIS */}
-          {activeTab === 'GAPS' && report.gaps && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                <h3 className="text-2xl font-black tracking-tight flex items-center gap-3">
-                    <AlertCircle className="w-6 h-6 text-red-500" />
-                    Deep Gap Analysis
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border border-red-100 dark:border-red-900/20 bg-red-50/5 dark:bg-red-950/5">
-                        <CardHeader className="font-bold p-4 bg-red-50/50 dark:bg-red-900/20 border-b dark:border-red-900/30">
-                            Missing Skills & Keywords
-                        </CardHeader>
-                        <CardBody className="p-6">
-                            <div className="flex flex-wrap gap-2">
-                                {report.gaps.missing_skills?.map(s => <Badge key={s} variant="danger" className="rounded-lg">{s}</Badge>)}
-                                {report.gaps.missing_keywords?.map(k => <Badge key={k} variant="secondary" className="rounded-lg">{k}</Badge>)}
-                            </div>
-                        </CardBody>
-                    </Card>
-
-                    <Card className="border border-purple-100 dark:border-purple-900/20 bg-purple-50/5 dark:bg-purple-950/5">
-                        <CardHeader className="font-bold p-4 bg-purple-50/50 dark:bg-purple-900/20 border-b dark:border-purple-900/30">
-                            Frameworks & Tools
-                        </CardHeader>
-                        <CardBody className="p-6">
-                            <div className="flex flex-wrap gap-2">
-                                {report.gaps.missing_frameworks?.map(f => <Badge key={f} variant="primary" className="rounded-lg">{f}</Badge>)}
-                            </div>
-                        </CardBody>
-                    </Card>
-
-                    <Card className="md:col-span-2 border border-amber-100 dark:border-amber-900/20 bg-amber-50/5 dark:bg-amber-950/5">
-                        <CardHeader className="font-bold p-4 bg-amber-50/50 dark:bg-amber-900/20 border-b dark:border-amber-900/30">
-                            Inferred Missing Metrics / Leadership Evidence
-                        </CardHeader>
-                        <CardBody className="p-6">
-                            <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                                {report.gaps.missing_metrics?.map((m, i) => <li key={i}>{m}</li>)}
-                                {report.gaps.missing_leadership?.map((l, i) => <li key={i}>{l}</li>)}
-                            </ul>
-                        </CardBody>
-                    </Card>
+                      )) || <p className="text-slate-400">No suggestions available.</p>}
+                    </div>
+                  </section>
                 </div>
-            </div>
-          )}
+              </div>
+            )}
 
+            {/* TAB: GAPS */}
+            {activeTab === 'gaps' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in slide-in-from-right-4 duration-500">
+                <section className="space-y-6">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-500" /> Strengths
+                  </h3>
+                  <div className="space-y-4">
+                    {report.strengths?.map((s, i) => (
+                      <div key={i} className="p-5 rounded-[2rem] bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30">
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-relaxed">{s}</p>
+                      </div>
+                    )) || <p>None</p>}
+                  </div>
+                </section>
+
+                <section className="space-y-6">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-500" /> Weaknesses
+                  </h3>
+                  <div className="space-y-4">
+                    {report.weaknesses?.map((s, i) => (
+                      <div key={i} className="p-5 rounded-[2rem] bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/30">
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-relaxed">{s}</p>
+                      </div>
+                    )) || <p>None</p>}
+                  </div>
+                </section>
+
+                <section className="md:col-span-2 p-10 bg-slate-50 dark:bg-slate-800/30 rounded-[2.5rem] space-y-6">
+                  <h3 className="text-xl font-black uppercase tracking-widest">Missing Skills & Keywords</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {report.missing_skills?.map((s, i) => <Badge key={i} variant="secondary" className="px-4 py-2 bg-white dark:bg-slate-900 border-none rounded-xl text-xs font-black uppercase tracking-wider">{s}</Badge>)}
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {/* TAB: COVER LETTER */}
+            {activeTab === 'cover' && (
+              <div className="animate-in slide-in-from-right-4 duration-500">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-2xl font-black text-indigo-600">Tailored Cover Letter</h3>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(report.cover_letter || '', 'Cover Letter')}>
+                    <Copy className="w-4 h-4 mr-2" /> Copy
+                  </Button>
+                </div>
+                <div className="max-w-[8.5in] mx-auto p-12 sm:p-20 bg-white dark:bg-slate-900 shadow-2xl rounded-[2.5rem] font-serif leading-relaxed text-lg min-h-[900px] border dark:border-slate-800">
+                  <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">
+                    {report.cover_letter || "No cover letter was generated for this report."}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: INTERVIEW PREP */}
+            {activeTab === 'interview' && (
+              <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-black uppercase tracking-tight">Interview Suite</h3>
+                  <Button variant="secondary" size="sm" onClick={() => copyToClipboard(typeof report.interview_prep === 'string' ? report.interview_prep : JSON.stringify(report.interview_prep), 'Interview Prep')}>
+                    <Copy className="w-4 h-4 mr-2" /> Copy All
+                  </Button>
+                </div>
+                <div className="grid gap-6">
+                  {(() => {
+                    let questions: any[] = [];
+                    try { questions = typeof report.interview_prep === 'string' ? JSON.parse(report.interview_prep) : (report.interview_prep || []); } catch { questions = []; }
+
+                    if (Array.isArray(questions) && questions.length > 0) {
+                      return questions.map((q, i) => (
+                        <div key={i} className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[2rem] border border-slate-100 dark:border-slate-800 group">
+                          <div className="flex items-start gap-4 mb-4">
+                            <span className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm">Q{i + 1}</span>
+                            <p className="font-black text-slate-900 dark:text-white text-lg leading-tight">{q.question}</p>
+                          </div>
+                          <div className="ml-14 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                            <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">{q.answer}</p>
+                          </div>
+                        </div>
+                      ));
+                    }
+
+                    return <div className="p-10 bg-slate-100 dark:bg-slate-800 rounded-3xl text-center font-bold text-slate-500">Detailed Q&A data not available for this legacy report.</div>;
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>

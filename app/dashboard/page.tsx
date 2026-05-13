@@ -125,19 +125,19 @@ export default function DashboardPage() {
     <DashboardLayout sidebarItems={sidebarItems}>
       <div className="space-y-8 pb-10">
         {/* Welcome Section */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              Welcome back, <span className="text-primary">{user?.name || 'User'}</span>!
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
+              Howdy, <span className="text-indigo-600">{user?.name?.split(' ')[0] || 'User'}</span>!
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-              Here is what is happening with your career progress.
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest">
+              Your career trajectory at a glance.
             </p>
           </div>
-          <div className="flex gap-3">
-             <Button asChild variant="outline" size="sm">
+          <div className="flex gap-2">
+             <Button asChild variant="outline" className="h-12 rounded-xl border-2 font-black px-6">
                <Link href="/dashboard/profile" className="flex items-center gap-2">
-                 <Settings className="w-4 h-4" /> Settings
+                 <Settings className="w-4 h-4" /> Account
                </Link>
              </Button>
           </div>
@@ -145,43 +145,43 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden group border-none bg-gradient-to-br from-blue-500/10 to-transparent dark:from-blue-500/5 dark:bg-[#0b0f1a] shadow-sm">
-            <CardBody className="p-6">
+          <Card className="relative overflow-hidden group border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-[2rem]">
+            <CardBody className="p-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">Total Resumes</p>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-1">{stats.totalResumes}</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Total Resumes</p>
+                  <p className="text-5xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{stats.totalResumes}</p>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                  <FileText className="w-6 h-6" />
+                <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform shadow-inner">
+                  <FileText className="w-7 h-7" />
                 </div>
               </div>
             </CardBody>
           </Card>
           
-          <Card className="relative overflow-hidden group border-none bg-gradient-to-br from-purple-500/10 to-transparent dark:from-purple-500/5 dark:bg-[#0b0f1a] shadow-sm">
-            <CardBody className="p-6">
+          <Card className="relative overflow-hidden group border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-[2rem]">
+            <CardBody className="p-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">Reports Done</p>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-1">{stats.totalReports}</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Reports Done</p>
+                  <p className="text-5xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{stats.totalReports}</p>
                 </div>
-                <div className="p-3 bg-purple-500/10 rounded-xl text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
-                  <BarChart3 className="w-6 h-6" />
+                <div className="w-14 h-14 bg-violet-50 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center text-violet-600 group-hover:-rotate-12 transition-transform shadow-inner">
+                  <BarChart3 className="w-7 h-7" />
                 </div>
               </div>
             </CardBody>
           </Card>
 
-          <Card className="relative overflow-hidden group border-none bg-gradient-to-br from-emerald-500/10 to-transparent dark:from-emerald-500/5 dark:bg-[#0b0f1a] shadow-sm lg:col-span-1 sm:col-span-2">
-            <CardBody className="p-6">
+          <Card className="relative overflow-hidden group border-none bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none rounded-[2rem] sm:col-span-2 lg:col-span-1">
+            <CardBody className="p-8">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">Stored JDs</p>
-                  <p className="text-4xl font-black text-gray-900 dark:text-white mt-1">{stats.totalJobDescriptions}</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Stored JDs</p>
+                  <p className="text-5xl font-black text-slate-900 dark:text-white mt-2 tracking-tighter">{stats.totalJobDescriptions}</p>
                 </div>
-                <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6" />
+                <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform shadow-inner">
+                  <Plus className="w-7 h-7" />
                 </div>
               </div>
             </CardBody>
