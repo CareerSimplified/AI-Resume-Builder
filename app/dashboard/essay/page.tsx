@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/DashboardLayout'
 import { Card, CardBody } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { userSidebarItems as sidebarItems } from '@/config/sidebar'
-import { Sparkles, Send, Copy, Download, BookOpen, Loader2, RefreshCw } from 'lucide-react'
+import { Sparkles, Send, Copy, Download, BookOpen, Loader2, RefreshCw, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 
 const PROMPT_TYPES = [
@@ -47,8 +47,8 @@ export default function EssayPage() {
 
       setEssay(data.essay)
       success('Essay generated successfully!')
-    } catch (err: any) {
-      error(err.message || 'Something went wrong')
+    } catch (err: unknown) {
+      error(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setIsGenerating(false)
     }
@@ -171,7 +171,7 @@ export default function EssayPage() {
                 <div className="relative z-10 bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-md p-6 sm:px-10 border-b dark:border-slate-800/50 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
-                       <FileText className="w-5 h-5 text-indigo-500" />
+                       {/* <FileText className="w-5 h-5 text-indigo-500" /> */}
                     </div>
                     <div>
                       <h3 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Manuscript Preview</h3>
