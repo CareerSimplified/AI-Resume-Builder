@@ -38,8 +38,23 @@ Hard requirements for rewrittenResume:
 function parseJSON(text: string) {
   try {
     let cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
+    
+    // Find first occurrence of { or [
+    const firstBrace = cleaned.indexOf("{");
+    const firstBracket = cleaned.indexOf("[");
+    let start = -1;
+    if (firstBrace !== -1 && firstBracket !== -1) start = Math.min(firstBrace, firstBracket);
+    else if (firstBrace !== -1) start = firstBrace;
+    else if (firstBracket !== -1) start = firstBracket;
+
+    // Find last occurrence of } or ]
+    const lastBrace = cleaned.lastIndexOf("}");
+    const lastBracket = cleaned.lastIndexOf("]");
+    let end = -1;
+    if (lastBrace !== -1 && lastBracket !== -1) end = Math.max(lastBrace, lastBracket);
+    else if (lastBrace !== -1) end = lastBrace;
+    else if (lastBracket !== -1) end = lastBracket;
+
     if (start !== -1 && end !== -1) {
       cleaned = cleaned.substring(start, end + 1);
     }
@@ -188,7 +203,7 @@ async function callAI(systemPrompt: string, userPrompt: string, useJsonFormat = 
 
   if (geminiKey) {
     console.log("[aiService] Using Gemini API fallback");
-    const generationConfig = useJsonFormat ? { responseMimeType: "application/json" } : {};
+    const generationConfig = useJsonFormat ? { response_mime_type: "application/json" } : {};
     const candidateModels = [
       "gemini-2.0-flash",
       "gemini-2.5-flash",
@@ -206,7 +221,8 @@ async function callAI(systemPrompt: string, userPrompt: string, useJsonFormat = 
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }]
+                contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                generationConfig
               }),
             }
           ).then(res => res.json());
